@@ -1,1 +1,0 @@
-div(mul(k, mul(add(k, k), mul(k, k))), mul(add(add(div(k, add(k, div(k, k))), k), add(k, sub(sub(k, k), div(k, k)))), sub(div(k, add(k, k)), mul(k, k))))

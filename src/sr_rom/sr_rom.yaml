@@ -12,7 +12,7 @@ gp:
   max_: 5
   overlapping_generation: True
   validate: True
-  penalty: { "method": "length", "reg_param": 0.}
+  penalty: { "method": "length", "reg_param": 0.1}
   select:
     #fun: self.tournament_with_elitism
     fun: random.sample
@@ -27,12 +27,14 @@ gp:
     fun: gp.cxOnePoint
     kargs: "{}"
   immigration: { "enabled": False, "freq": 10, "frac": 0.9 }
-  primitives: [
-    {"name": "add", "dimension": None, "rank": None},
-    {"name": "sub", "dimension": None, "rank": None},
-    {"name": "mul", "dimension": None, "rank": None},
-    {"name": "div", "dimension": None, "rank": None},
-  ]
+  primitives:
+    imports: { "alpine.gp.numpy_primitives": ["numpy_primitives"] }  
+    used: [
+      {"name": "add", "dimension": None, "rank": None},
+      {"name": "sub", "dimension": None, "rank": None},
+      {"name": "mul", "dimension": None, "rank": None},
+      {"name": "div", "dimension": None, "rank": None},
+      ]
   residual_formulation: False
 
 plot:

@@ -5,6 +5,7 @@ from alpine.gp import gpsymbreg as gps
 from typing import Callable, Tuple, List
 import ray
 from deap import gp
+from deap.base import Toolbox
 import time
 import sys
 import yaml
@@ -37,35 +38,49 @@ def eval_MSE_sol(individual: Callable, indlen: int,
 
 
 @ray.remote(num_cpus=num_cpus)
-def eval_MSE(individual: Callable, indlen: int, k_component: Dataset,
+def eval_MSE(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox, k_component: Dataset,
              penalty: float) -> float:
-    MSE, _ = eval_MSE_sol(individual, indlen, k_component)
-    return MSE
+    objvals = [None]*len(individuals_batch)
+
+    for i, individual in enumerate(individuals_batch):
+        callable = toolbox.compile(expr=individual)
+        objvals[i], _ = eval_MSE_sol(callable, indlen, k_component)
+    return objvals
 
 
 @ray.remote(num_cpus=num_cpus)
-def predict(individual: Callable, indlen: int, k_component: Dataset,
-            penalty: float) -> List:
-    _, pred = eval_MSE_sol(individual, indlen, k_component)
-    return pred
+def predict(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox,
+            k_component: Dataset, penalty: float) -> List:
+    best_sols = [None]*len(individuals_batch)
+
+    for i, individual in enumerate(individuals_batch):
+        callable = toolbox.compile(expr=individual)
+        _, best_sols[i] = eval_MSE_sol(callable, indlen, k_component)
+
+    return best_sols
 
 
 @ray.remote(num_cpus=num_cpus)
-def fitness(individual: Callable, indlen: int, k_component: Dataset,
-            penalty: float) -> Tuple[float, ]:
+def fitness(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox,
+            k_component: Dataset, penalty: float) -> Tuple[float, ]:
 
-    MSE, _ = eval_MSE_sol(individual, indlen, k_component)
+    objvals = [None]*len(individuals_batch)
 
-    # add penalty on length of the tree to promote simpler solutions
-    fitness = MSE + penalty["reg_param"]*indlen
+    for i, individual in enumerate(individuals_batch):
+        callable = toolbox.compile(expr=individual)
+        MSE, _ = eval_MSE_sol(callable, indlen, k_component)
 
-    # return value MUST be a tuple
-    return fitness,
+        # add penalty on length of the tree to promote simpler solutions
+        fitness = MSE + penalty["reg_param"]*len(individual)
+        # each value MUST be a tuple
+        objvals[i] = (fitness,)
+
+    return objvals
 
 
 def sr_rom(config_file_data, train_data, val_data, test_data):
     i = 0
-    j = 0
+    j = 2
     train_A_i_j = [A_B['A'][i, j]for A_B in train_data.y]
     val_A_i_j = [A_B['A'][i, j]for A_B in val_data.y]
     test_A_i_j = [A_B['A'][i, j]for A_B in test_data.y]
@@ -90,7 +105,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
         common_data=common_params, config_file_data=config_file_data,
         save_best_individual=True, save_train_fit_history=True,
         plot_best_individual_tree=False,
-        output_path="./")
+        output_path="./", batch_size=100)
 
     start = time.perf_counter()
     gpsr.fit(train_data_i_j, val_data_i_j)
