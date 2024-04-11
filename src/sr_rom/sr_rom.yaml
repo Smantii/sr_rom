@@ -1,0 +1,40 @@
+# template for sr_rom parameters file
+gp:
+  NINDIVIDUALS: 1000
+  NGEN: 100
+  multi_island:
+    num_islands: 1
+    migration: { "freq": 10, "frac": 0.05 }
+  crossover_prob: 0.
+  MUTPB: 1.
+  frac_elitist: 0
+  min_: 2
+  max_: 5
+  overlapping_generation: True
+  validate: True
+  penalty: { "method": "length", "reg_param": 0.}
+  select:
+    #fun: self.tournament_with_elitism
+    fun: random.sample
+    #kargs: "{'tournsize': 2, 'stochastic_tourn': { 'enabled': True, 'prob': [0.8, 0.2] }}"
+    kargs: "{'k': self.NINDIVIDUALS}"
+  mutate:
+    fun: gp.mixedMutate
+    kargs: "{'expr': self.toolbox.expr_mut, 'pset': self.pset, 'prob': [0.7, 0.2, 0.1]}" # string is important
+    expr_mut: gp.genHalfAndHalf
+    expr_mut_kargs: "{'min_': 1, 'max_': 3}"
+  crossover:
+    fun: gp.cxOnePoint
+    kargs: "{}"
+  immigration: { "enabled": False, "freq": 10, "frac": 0.9 }
+  primitives: [
+    {"name": "add", "dimension": None, "rank": None},
+    {"name": "sub", "dimension": None, "rank": None},
+    {"name": "mul", "dimension": None, "rank": None},
+    {"name": "div", "dimension": None, "rank": None},
+  ]
+  residual_formulation: False
+
+plot:
+  plot_best: False
+  plot_best_genealogy: False
