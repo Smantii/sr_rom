@@ -3,6 +3,7 @@ import numpy.typing as npt
 from typing import Tuple
 from alpine.data import Dataset
 from sklearn.model_selection import train_test_split as ttsplit
+import os
 
 
 def toy_data(k: float, r: int) -> Tuple[npt.NDArray, npt.NDArray]:
@@ -43,6 +44,22 @@ def split_data(k_array, A_B_list):
     return train_data, val_data, test_data
 
 
+def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
+    data_path = os.path.dirname(os.path.realpath(__file__))
+    bench_path = os.path.join(data_path, bench_name)
+    k_list = []
+    A_B_list = []
+    for directory in os.listdir(bench_path):
+        directory_path = os.path.join(bench_path, directory)
+        k = float(directory.replace("Re", ""))
+        A = np.loadtxt(directory_path+"/tildeA_N5", delimiter=',', usecols=range(r))
+        B = np.loadtxt(directory_path+"/tildeB_N5", delimiter=',', usecols=range(r))
+        k_list.append(k)
+        A_B_list.append({'A': A, 'B': B})
+    return np.array(k_list), A_B_list
+
+
 if __name__ == "__main__":
-    k_array, A_B_list = generate_toy_data(3)
-    data = split_data(k_array, A_B_list)
+    # k_array, A_B_list = generate_toy_data(3)
+    # data = split_data(k_array, A_B_list)
+    process_data(5, "2dcyl")
