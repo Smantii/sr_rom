@@ -163,7 +163,6 @@ if __name__ == "__main__":
         config_file_data = yaml.safe_load(config_file)
 
     # load data
-    # k_array, A_B_list = generate_toy_data(3)
     k_array, A_B_list = process_data(5, "2dcyl")
     train_data, val_data, test_data = split_data(k_array, A_B_list)
     sr_rom(config_file_data, train_data, val_data, test_data)

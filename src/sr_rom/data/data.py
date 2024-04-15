@@ -55,8 +55,10 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
         A = np.loadtxt(directory_path+"/tildeA_N5", delimiter=',', usecols=range(r))
         B = np.loadtxt(directory_path+"/tildeB_N5", delimiter=',', usecols=range(r))
         # normalize A and B
-        A = (A - np.min(A))/(np.max(A) - np.min(A))
-        B = (B - np.min(B))/(np.max(B) - np.min(B))
+        A *= 1000
+        B *= 1000
+        # A = (A - np.min(A))/(np.max(A) - np.min(A))
+        # B = (B - np.min(B))/(np.max(B) - np.min(B))
         k_list.append(k)
         A_B_list.append({'A': A, 'B': B})
     return k_list, A_B_list
