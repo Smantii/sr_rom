@@ -33,9 +33,9 @@ def generate_toy_data(r):
 
 def split_data(k_array, A_B_list):
     k_train_val, k_test, A_B_train_val, A_B_test = ttsplit(
-        k_array, A_B_list, test_size=0.2, random_state=42, shuffle=False)
+        k_array, A_B_list, test_size=0.1, random_state=42, shuffle=False)
     k_train, k_val, A_B_train,  A_B_val = ttsplit(
-        k_train_val, A_B_train_val, test_size=3/8, random_state=42, shuffle=False)
+        k_train_val, A_B_train_val, test_size=1/9, random_state=42, shuffle=False)
 
     train_data = Dataset("k_A_B", k_train, A_B_train)
     val_data = Dataset("k_A_B", k_val, A_B_val)

@@ -1,6 +1,6 @@
 # template for sr_rom parameters file
 gp:
-  NINDIVIDUALS: 500
+  NINDIVIDUALS: 100
   NGEN: 100
   multi_island:
     num_islands: 10
@@ -34,6 +34,14 @@ gp:
       {"name": "sub", "dimension": None, "rank": None},
       {"name": "mul", "dimension": None, "rank": None},
       {"name": "div", "dimension": None, "rank": None},
+      {"name": "exp", "dimension": None, "rank": None},
+      {"name": "log", "dimension": None, "rank": None},
+      #{"name": "sin", "dimension": None, "rank": None},
+      #{"name": "cos", "dimension": None, "rank": None},
+      #{"name": "arcsin", "dimension": None, "rank": None},
+      #{"name": "arccos", "dimension": None, "rank": None},
+      {"name": "sqrt", "dimension": None, "rank": None},
+      {"name": "square", "dimension": None, "rank": None},
       ]
   residual_formulation: False
 
