@@ -160,14 +160,14 @@ def assign_consts(individuals, attributes):
         ind.fitness.values = attr["fitness"]
 
 
-def sr_rom(config_file_data, train_data, val_data, test_data):
+def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     best_ind_str = []
     ts_scores = jnp.zeros((5, 5), dtype=jnp.float64)
 
     # for i in range(5):
     #    for j in range(5):
     i = 0
-    j = 1
+    j = 0
 
     train_A_i_j = [A_B['A'][i, j]for A_B in train_data.y]
     val_A_i_j = [A_B['A'][i, j]for A_B in val_data.y]
@@ -204,9 +204,9 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
         error_metric=eval_MSE.remote, predict_func=predict.remote,
         feature_extractors=[len], print_log=True,
         common_data=common_params, config_file_data=config_file_data,
-        save_best_individual=False, save_train_fit_history=False,
+        save_best_individual=True, save_train_fit_history=True,
         plot_best_individual_tree=False, callback_func=assign_consts,
-        output_path="./", batch_size=200, seed=seed)
+        output_path=output_path, batch_size=200, seed=seed)
 
     start = time.perf_counter()
     if config_file_data['gp']['validate']:
@@ -269,6 +269,10 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
     plt.xlabel(r"$Re$")
     plt.ylabel(r"$A_{ij}$")
     plt.legend(loc="lower right")
+
+    import os
+    os.chdir(output_path)
+
     plt.savefig("data_vs_sol.pdf", dpi=300)
 
     np.savetxt("best_individuals.txt", np.array(best_ind_str), fmt="%s")
@@ -276,7 +280,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
 
 
 if __name__ == "__main__":
-
+    n_args = len(sys.argv)
     param_file = sys.argv[1]
     with open(param_file) as config_file:
         config_file_data = yaml.safe_load(config_file)
@@ -286,4 +290,9 @@ if __name__ == "__main__":
     # k_array, A_B_list = generate_toy_data(5)
     k_array, A_B_list = process_data(5, "2dcyl")
     train_data, val_data, test_data = split_data(k_array, A_B_list)
-    sr_rom(config_file_data, train_data, val_data, test_data)
+
+    if n_args >= 3:
+        output_path = sys.argv[2]
+    else:
+        output_path = "."
+    sr_rom(config_file_data, train_data, val_data, test_data, output_path)
