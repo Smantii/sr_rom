@@ -1,9 +1,9 @@
 # template for sr_rom parameters file
 gp:
-  NINDIVIDUALS: 500
-  NGEN: 100
+  NINDIVIDUALS: 10
+  NGEN: 10
   multi_island:
-    num_islands: 8
+    num_islands: 1
     migration: { "freq": 10, "frac": 0.05 }
   crossover_prob: 0.
   MUTPB: 1.
@@ -11,7 +11,7 @@ gp:
   min_: 2
   max_: 5
   overlapping_generation: True
-  validate: True
+  validate: False
   penalty: { "method": "length", "reg_param": 0.}
   select:
     #fun: self.tournament_with_elitism

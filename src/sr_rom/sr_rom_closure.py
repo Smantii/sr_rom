@@ -13,8 +13,10 @@ import yaml
 from dctkit import config
 from jax import jit, grad
 import pygmo as pg
+import numpy as np
+import matplotlib.pyplot as plt
 
-
+warnings.filterwarnings('ignore')
 config()
 
 
@@ -25,6 +27,8 @@ def eval_MSE_sol(individual: Callable, indlen: int,
                  k_component: Dataset) -> Tuple[float, List]:
 
     warnings.filterwarnings('ignore')
+
+    config()
 
     k_array = k_component.X
     component_computed = individual(k_array)
@@ -63,14 +67,23 @@ def eval_MSE_and_tune_constants(tree, toolbox, k_component: Dataset):
             def get_bounds(self):
                 return (-5.*jnp.ones(n_constants), 5.*jnp.ones(n_constants))
 
-        # PYGMO SOLVER
+        # NLOPT solver
         prb = pg.problem(fitting_problem())
-        algo = pg.algorithm(pg.scipy_optimize(method="L-BFGS-B"))
+        algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
+        algo.extract(pg.nlopt).ftol_abs = 1e-12
+        algo.extract(pg.nlopt).ftol_rel = 1e-12
+        algo.extract(pg.nlopt).maxeval = 5000
         pop = pg.population(prb, size=1)
         pop.push_back(x0)
         pop = algo.evolve(pop)
-        best_fit = pop.champion_f[0]
-        best_consts = pop.champion_x
+        opt_result = algo.extract(pg.nlopt).get_last_opt_result()
+        if (opt_result == 1) or (opt_result == 3) or (opt_result == 4):
+            best_fit = pop.champion_f[0]
+            best_consts = pop.champion_x
+        else:
+            best_fit = jnp.nan
+            best_consts = []
+
     else:
         best_fit = eval_err([])
         best_consts = []
@@ -135,7 +148,7 @@ def compile_individual_with_consts(tree, toolbox):
             if node.name == "a":
                 new_node_name = "a[" + str(const_idx) + "]"
                 tree_clone[i] = gp.Terminal(new_node_name, True, float)
-            const_idx += 1
+                const_idx += 1
 
     individual = toolbox.compile(expr=tree_clone, extra_args=["a"])
     return individual, const_idx
@@ -154,7 +167,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
     # for i in range(5):
     #    for j in range(5):
     i = 0
-    j = 0
+    j = 1
 
     train_A_i_j = [A_B['A'][i, j]for A_B in train_data.y]
     val_A_i_j = [A_B['A'][i, j]for A_B in val_data.y]
@@ -176,10 +189,6 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
     pset.renameArguments(ARG0="k")
 
     # add constants
-    pset.addTerminal(0.5, float, name="1/2")
-    pset.addTerminal(-1., float, name="-1.")
-    pset.addTerminal(1., float, name="1.")
-    pset.addTerminal(2., float, name="2.")
     pset.addTerminal(object, float, "a")
 
     penalty = config_file_data["gp"]['penalty']
@@ -216,24 +225,54 @@ def sr_rom(config_file_data, train_data, val_data, test_data):
 
     print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
 
-    print(gpsr.predict(train_data_i_j))
-    print(train_A_i_j)
+    # train_computed = gpsr.predict(train_data_i_j)
+    # val_computed = gpsr.predict(val_data_i_j)
+    train_val_computed = gpsr.predict(train_val_data_i_j)
+    test_computed = gpsr.predict(test_data_i_j)
+
+    # print(train_computed)
+    # print(train_A_i_j)
+    # print("------------------")
+    # print(val_computed)
+    # print(val_A_i_j)
+
+    print(train_val_computed)
+    print(train_val_A_i_j)
+
     print("------------------")
-    print(gpsr.predict(val_data_i_j))
-    print(val_A_i_j)
 
-    # print(gpsr.predict(train_val_data_i_j))
-    # print(train_val_A_i_j)
-
-    print("------------------")
-
-    print(gpsr.predict(test_data_i_j))
+    print(test_computed)
     print(test_A_i_j)
 
     print("Best constants = ", gpsr.best.consts)
 
-    # jnp.savetxt("best_individuals.txt", jnp.array(best_ind_str), fmt="%s")
-    # jnp.savetxt("test_scores.txt", ts_scores)
+    k_data = np.concatenate((train_val_data_i_j.X, test_data_i_j.X))
+
+    A_i_j_computed = np.concatenate((train_val_computed, test_computed))
+
+    # NOTE:only for plot
+    # FIXME: do a separate func
+    ordered_idx = np.argsort(k_data)
+    ordered_train_val_idx = np.argsort(train_val_data_i_j.X)
+    ordered_test_idx = np.argsort(test_data_i_j.X)
+    k_train_val_ord = train_val_data_i_j.X[ordered_train_val_idx]
+    k_test_ord = test_data_i_j.X[ordered_test_idx]
+    A_i_j_train_val_ord = np.array(train_val_A_i_j)[ordered_train_val_idx]
+    A_i_j_test_ord = np.array(test_A_i_j)[ordered_test_idx]
+    k_ord = k_data[ordered_idx]
+    A_i_j_computed_ord = A_i_j_computed[ordered_idx]
+
+    plt.scatter(k_train_val_ord, A_i_j_train_val_ord,
+                c="#b2df8a", marker=".", label="Training data")
+    plt.scatter(k_test_ord, A_i_j_test_ord, c="#b2df8a", marker="*", label="Test data")
+    plt.plot(k_ord, A_i_j_computed_ord, c="#1f78b4", label="Best solution")
+    plt.xlabel(r"$Re$")
+    plt.ylabel(r"$A_{ij}$")
+    plt.legend(loc="lower right")
+    plt.savefig("data_vs_sol.pdf", dpi=300)
+
+    np.savetxt("best_individuals.txt", np.array(best_ind_str), fmt="%s")
+    np.savetxt("test_scores.txt", ts_scores)
 
 
 if __name__ == "__main__":
