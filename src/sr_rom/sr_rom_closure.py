@@ -260,12 +260,17 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     A_i_j_train_val_ord = np.array(train_val_A_i_j)[ordered_train_val_idx]
     A_i_j_test_ord = np.array(test_A_i_j)[ordered_test_idx]
     k_ord = k_data[ordered_idx]
-    A_i_j_computed_ord = A_i_j_computed[ordered_idx]
+    # A_i_j_computed_ord = A_i_j_computed[ordered_idx]
+
+    k_sample = np.linspace(min(k_ord), max(k_ord), 1001)
+    data = Dataset("k_component", k_sample, np.zeros_like(k_sample))
+    A_i_j_computed = gpsr.predict(data)
 
     plt.scatter(k_train_val_ord, A_i_j_train_val_ord,
                 c="#b2df8a", marker=".", label="Training data")
     plt.scatter(k_test_ord, A_i_j_test_ord, c="#b2df8a", marker="*", label="Test data")
-    plt.plot(k_ord, A_i_j_computed_ord, c="#1f78b4", label="Best solution")
+    plt.plot(k_sample, A_i_j_computed, c="#1f78b4", label="Best solution")
+    # plt.plot(k_ord, A_i_j_computed_ord, c="#1f78b4", label="Best solution")
     plt.xlabel(r"$Re$")
     plt.ylabel(r"$A_{ij}$")
     plt.legend(loc="lower right")
@@ -288,7 +293,7 @@ if __name__ == "__main__":
     # load data
     # from sr_rom.data.data import generate_toy_data
     # k_array, A_B_list = generate_toy_data(5)
-    k_array, A_B_list = process_data(5, "2dcyl")
+    k_array, A_B_list = process_data(5, "2dcyl/Re200_300")
     train_data, val_data, test_data = split_data(k_array, A_B_list)
 
     if n_args >= 3:
