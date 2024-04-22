@@ -52,20 +52,26 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     for directory in os.listdir(bench_path):
         directory_path = os.path.join(bench_path, directory)
         k = float(directory.replace("Re", ""))
-        if k != 225 and k != 275:
+        if k != 225 and k != 275 and k != 285:
             A = np.loadtxt(directory_path+"/tildeA_N5", delimiter=',', usecols=range(r))
             B = np.loadtxt(directory_path+"/tildeB_N5", delimiter=',', usecols=range(r))
-            # normalize A and B
+            # rescale A and B
             A *= 1000
             B *= 1000
-            # A = (A - np.min(A))/(np.max(A) - np.min(A))
-            # B = (B - np.min(B))/(np.max(B) - np.min(B))
             k_list.append(k)
             A_B_list.append({'A': A, 'B': B})
+
+    # sort k_list and A_B_list
+    k_array = np.array(k_list)
+    A_B_array = np.array(A_B_list, dtype=object)
+    idx_ordered = np.argsort(k_array)
+
+    k_list = list(k_array[idx_ordered])
+    A_B_list = list(A_B_array[idx_ordered])
     return k_list, A_B_list
 
 
 if __name__ == "__main__":
     # k_array, A_B_list = generate_toy_data(3)
     # data = split_data(k_array, A_B_list)
-    process_data(5, "2dcyl")
+    process_data(5, "2dcyl/Re200_300")
