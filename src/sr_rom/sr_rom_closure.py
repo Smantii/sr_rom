@@ -70,13 +70,14 @@ def eval_MSE_and_tune_constants(tree, toolbox, k_component: Dataset):
         # NLOPT solver
         prb = pg.problem(fitting_problem())
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
-        algo.extract(pg.nlopt).ftol_abs = 1e-6
-        algo.extract(pg.nlopt).ftol_rel = 1e-6
-        algo.extract(pg.nlopt).maxeval = 1000
+        algo.extract(pg.nlopt).ftol_abs = 1e-12
+        algo.extract(pg.nlopt).ftol_rel = 1e-12
+        algo.extract(pg.nlopt).maxeval = 5000
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)
         opt_result = algo.extract(pg.nlopt).get_last_opt_result()
+        print(opt_result)
         if (opt_result == 1) or (opt_result == 3) or (opt_result == 4):
             best_fit = pop.champion_f[0]
             best_consts = pop.champion_x
@@ -197,7 +198,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = None
+    seed = ["MulF(SubF(AddF(a, a), MulF(a, k)), SubF(MulF(a, k), MulF(SubF(AddF(SubF(k, AddF(MulF(SubF(k, SubF(MulF(k, a), SubF(k, a))), SubF(k, MulF(SubF(SubF(k, k), a), MulF(SubF(a, k), AddF(a, k))))), MulF(SubF(a, SubF(SubF(k, a), MulF(a, k))), MulF(a, a)))), SubF(MulF(MulF(a, a), k), SubF(MulF(k, a), SubF(k, a)))), AddF(a, AddF(AddF(SubF(MulF(k, a), MulF(k, a)), AddF(AddF(k, a), SubF(a, k))), a))), a)))"]
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
