@@ -52,14 +52,15 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     for directory in os.listdir(bench_path):
         directory_path = os.path.join(bench_path, directory)
         k = float(directory.replace("Re", ""))
-        if k != 225 and k != 275 and k != 285:
-            A = np.loadtxt(directory_path+"/tildeA_N5", delimiter=',', usecols=range(r))
-            B = np.loadtxt(directory_path+"/tildeB_N5", delimiter=',', usecols=range(r))
-            # rescale A and B
-            A *= 1000
-            B *= 1000
-            k_list.append(k)
-            A_B_list.append({'A': A, 'B': B})
+        A = np.loadtxt(directory_path+"/tildeA_N5_w_rank5",
+                       delimiter=',', usecols=range(r))
+        B = np.loadtxt(directory_path+"/tildeB_N5_w_rank5",
+                       delimiter=',', usecols=range(r))
+        # rescale A and B
+        A *= 1e4
+        B *= 1e4
+        k_list.append(k)
+        A_B_list.append({'A': A, 'B': B})
 
     # sort k_list and A_B_list
     k_array = np.array(k_list)
@@ -74,4 +75,4 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
 if __name__ == "__main__":
     # k_array, A_B_list = generate_toy_data(3)
     # data = split_data(k_array, A_B_list)
-    process_data(5, "2dcyl/Re200_300")
+    process_data(5, "2dcyl/Re200_300_rank5")

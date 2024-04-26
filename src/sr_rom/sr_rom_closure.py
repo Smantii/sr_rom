@@ -70,10 +70,10 @@ def eval_MSE_and_tune_constants(tree, toolbox, k_component: Dataset):
         # NLOPT solver
         prb = pg.problem(fitting_problem())
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
-        algo.extract(pg.nlopt).ftol_abs = 1e-12
-        algo.extract(pg.nlopt).ftol_rel = 1e-12
-        algo.extract(pg.nlopt).maxeval = 5000
-        pop = pg.population(prb, size=1)
+        algo.extract(pg.nlopt).ftol_abs = 1e-6
+        algo.extract(pg.nlopt).ftol_rel = 1e-6
+        algo.extract(pg.nlopt).maxeval = 1000
+        pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)
         opt_result = algo.extract(pg.nlopt).get_last_opt_result()
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     # load data
     # from sr_rom.data.data import generate_toy_data
     # k_array, A_B_list = generate_toy_data(5)
-    k_array, A_B_list = process_data(5, "2dcyl/Re200_300")
+    k_array, A_B_list = process_data(5, "2dcyl/Re200_300_rank5")
     train_data, val_data, test_data = split_data(k_array, A_B_list)
 
     if n_args >= 3:
