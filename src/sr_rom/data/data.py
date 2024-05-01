@@ -31,48 +31,83 @@ def generate_toy_data(r):
     return k_list, A_B_list
 
 
-def split_data(k_array, A_B_list):
-    k_train_val, k_test, A_B_train_val, A_B_test = ttsplit(
-        k_array, A_B_list, test_size=0.1, random_state=42, shuffle=False)
-    k_train, k_val, A_B_train,  A_B_val = ttsplit(
-        k_train_val, A_B_train_val, test_size=1/9, random_state=42, shuffle=False)
+def split_data(Re, A, B, tau, a_FOM):
+    num_data = len(Re)
 
-    train_data = Dataset("k_A_B", k_train, A_B_train)
-    val_data = Dataset("k_A_B", k_val, A_B_val)
-    test_data = Dataset("k_A_B", k_test, A_B_test)
+    Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
+        Re, np.arange(num_data), test_size=0.1, random_state=42, shuffle=False)
+    Re_train, Re_val, idx_train,  idx_val = ttsplit(
+        Re_train_val, idx_train_val, test_size=1/9, random_state=42, shuffle=False)
 
-    return train_data, val_data, test_data
+    A_train = A[idx_train]
+    A_train_val = A[idx_train_val]
+    A_val = A[idx_val]
+    A_test = A[idx_test]
+
+    B_train = B[idx_train]
+    B_train_val = B[idx_train_val]
+    B_val = B[idx_val]
+    B_test = B[idx_test]
+
+    tau_train = tau[idx_train]
+    tau_train_val = tau[idx_train_val]
+    tau_val = tau[idx_val]
+    tau_test = tau[idx_test]
+
+    a_FOM_train = a_FOM[idx_train]
+    a_FOM_train_val = a_FOM[idx_train_val]
+    a_FOM_val = a_FOM[idx_val]
+    a_FOM_test = a_FOM[idx_test]
+
+    data_train = {'A': A_train, 'B': B_train, 'tau': tau_train, 'a_FOM': a_FOM_train}
+    data_train_val = {'A': A_train_val, 'B': B_train_val,
+                      'tau': tau_train_val, 'a_FOM': a_FOM_train_val}
+    data_val = {'A': A_val, 'B': B_val, 'tau': tau_val, 'a_FOM': a_FOM_val}
+    data_test = {'A': A_test, 'B': B_test, 'tau': tau_test, 'a_FOM': a_FOM_test}
+
+    train_data = Dataset("Re_data", Re_train, data_train)
+    train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
+    val_data = Dataset("Re_data", Re_val, data_val)
+    test_data = Dataset("Re_data", Re_test, data_test)
+
+    return train_data, val_data, train_val_data, test_data
 
 
 def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     data_path = os.path.dirname(os.path.realpath(__file__))
     bench_path = os.path.join(data_path, bench_name)
-    k_list = []
-    A_B_list = []
-    for directory in os.listdir(bench_path):
+
+    dir_list = sorted(os.listdir(bench_path))
+    num_data = len(dir_list)
+
+    Re = np.zeros(num_data)
+    A = np.zeros((num_data, r, r))
+    B = np.zeros((num_data, r, r, r))
+    tau = np.zeros((num_data, 2001, r))
+    a_FOM = np.zeros((num_data, 2001, r))
+
+    for i, directory in enumerate(dir_list):
         directory_path = os.path.join(bench_path, directory)
-        k = float(directory.replace("Re", ""))
-        A = np.loadtxt(directory_path+"/tildeA_N5_w_rank5",
-                       delimiter=',', usecols=range(r))
-        B = np.loadtxt(directory_path+"/tildeB_N5_w_rank5",
-                       delimiter=',', usecols=range(r))
-        # rescale A and B
-        A *= 1e4
-        B *= 1e4
-        k_list.append(k)
-        A_B_list.append({'A': A, 'B': B})
+        curr_Re = float(directory.replace("Re", ""))
+        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
+                              delimiter=',', usecols=range(r))
+        curr_A = np.loadtxt(directory_path+"/tildeA_N5",
+                            delimiter=',', usecols=range(r))
+        curr_B = np.loadtxt(directory_path+"/tildeB_N5",
+                            delimiter=',', usecols=range(r**2)).reshape((r, r, r))
+        uk = np.loadtxt(directory_path+"/uk", delimiter=',')
+        curr_a_FOM = uk.reshape((2001, 41))[:, 1:(r+1)]
 
-    # sort k_list and A_B_list
-    k_array = np.array(k_list)
-    A_B_array = np.array(A_B_list, dtype=object)
-    idx_ordered = np.argsort(k_array)
+        Re[i] = curr_Re
+        A[i, :, :] = curr_A
+        B[i, :, :, :] = curr_B
+        tau[i, :, :] = curr_tau
+        a_FOM[i, :, :] = curr_a_FOM
 
-    k_list = list(k_array[idx_ordered])
-    A_B_list = list(A_B_array[idx_ordered])
-    return k_list, A_B_list
+    return Re, A, B, tau, a_FOM
 
 
 if __name__ == "__main__":
     # k_array, A_B_list = generate_toy_data(3)
     # data = split_data(k_array, A_B_list)
-    process_data(5, "2dcyl/Re200_300_rank5")
+    process_data(5, "2dcyl/Re200_300")

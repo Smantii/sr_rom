@@ -1,12 +1,12 @@
 # template for sr_rom parameters file
 gp:
-  NINDIVIDUALS: 1
-  NGEN: 1
+  NINDIVIDUALS: 100
+  NGEN: 10
   multi_island:
     num_islands: 1
     migration: { "freq": 10, "frac": 0.05 }
   crossover_prob: 0.
-  MUTPB: 0.
+  MUTPB: 1.
   frac_elitist: 0
   min_: 1
   max_: 3
@@ -28,7 +28,8 @@ gp:
     kargs: "{}"
   immigration: { "enabled": False, "freq": 10, "frac": 0.9 }
   primitives:
-    imports: { "alpine.gp.jax_primitives": ["jax_primitives"] }  
+    imports: {"alpine.gp.jax_primitives": ["jax_primitives"],
+              "sr_rom.primitives": ["array_primitives"]}  
     used: [
       {"name": "AddF", "dimension": None, "rank": None},
       {"name": "SubF", "dimension": None, "rank": None},
@@ -42,6 +43,9 @@ gp:
       {"name": "arccos", "dimension": None, "rank": None},
       {"name": "SqrtF", "dimension": None, "rank": None},
       {"name": "SquareF", "dimension": None, "rank": None},
+      {"name": "Add", "dimension": None, "rank": None},
+      {"name": "Sub", "dimension": None, "rank": None},
+      {"name": "sc_mul", "dimension": None, "rank": None},
       ]
   residual_formulation: False
 
