@@ -29,7 +29,8 @@ gp:
   immigration: { "enabled": False, "freq": 10, "frac": 0.9 }
   primitives:
     imports: {"alpine.gp.jax_primitives": ["jax_primitives"],
-              "sr_rom.primitives": ["array_primitives"]}  
+              #"sr_rom.primitives": ["array_primitives"]
+              }  
     used: [
       {"name": "AddF", "dimension": None, "rank": None},
       {"name": "SubF", "dimension": None, "rank": None},
@@ -43,9 +44,9 @@ gp:
       #{"name": "arccos", "dimension": None, "rank": None},
       {"name": "SqrtF", "dimension": None, "rank": None},
       {"name": "SquareF", "dimension": None, "rank": None},
-      {"name": "Add", "dimension": None, "rank": None},
-      {"name": "Sub", "dimension": None, "rank": None},
-      {"name": "sc_mul", "dimension": None, "rank": None},
+      #{"name": "Add", "dimension": None, "rank": None},
+      #{"name": "Sub", "dimension": None, "rank": None},
+      #{"name": "sc_mul", "dimension": None, "rank": None},
       ]
   residual_formulation: False
 

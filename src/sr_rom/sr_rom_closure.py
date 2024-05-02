@@ -37,7 +37,10 @@ def compute_MSE_sol(individual: Callable, indlen: int,
     B_i = Re_data.y['B'][:, i, :, :]
     a_FOM = Re_data.y['a_FOM']
 
-    A_computed = jnp.array(list(map(individual, Re_array)))
+    # A_computed = jnp.array(list(map(individual, Re_array)))
+    A_computed = jnp.array(Re_data.y['A'][:, 0, :].copy())
+    A_computed = A_computed.at[:, 0].set(individual(Re_array))
+
     A_a_FOM = jnp.einsum("ij,ikj->ik", A_computed, a_FOM)
     a_FOM_T_B_a_FOM = jnp.einsum("lmj, ljk, lmk->lm", a_FOM, B_i, a_FOM)
     tau_computed = A_a_FOM + a_FOM_T_B_a_FOM
@@ -184,7 +187,8 @@ def assign_consts(individuals, attributes):
 
 
 def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, output_path):
-    pset = gp.PrimitiveSetTyped("MAIN", [float], Array)
+    # pset = gp.PrimitiveSetTyped("MAIN", [float], Array)
+    pset = gp.PrimitiveSetTyped("MAIN", [float], float)
 
     # rename arguments of the tree function
     pset.renameArguments(ARG0="k")
@@ -193,10 +197,10 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     pset.addTerminal(object, float, "a")
 
     # add base for R^5
-    for i in range(5):
-        e_i = jnp.zeros(5, dtype=dt.float_dtype)
-        e_i = e_i.at[i].set(1.)
-        pset.addTerminal(e_i, Array, "e_" + str(i))
+    # for i in range(5):
+    #    e_i = jnp.zeros(5, dtype=dt.float_dtype)
+    #    e_i = e_i.at[i].set(1.)
+    #    pset.addTerminal(e_i, Array, "e_" + str(i))
 
     penalty = config_file_data["gp"]['penalty']
 
