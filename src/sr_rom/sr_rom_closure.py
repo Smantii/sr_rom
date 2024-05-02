@@ -213,7 +213,7 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
         common_data=common_params, config_file_data=config_file_data,
         save_best_individual=True, save_train_fit_history=True,
         plot_best_individual_tree=False, callback_func=assign_consts,
-        output_path=output_path, batch_size=200, seed=seed)
+        output_path=output_path, batch_size=1, seed=seed)
 
     start = time.perf_counter()
     # NOTE implement plot funcs and test error
