@@ -45,8 +45,10 @@ def compute_MSE_sol(individual: Callable, indlen: int,
     a_FOM_T_B_a_FOM = jnp.einsum("lmj, ljk, lmk->lm", a_FOM, B_i, a_FOM)
     tau_computed = A_a_FOM + a_FOM_T_B_a_FOM
 
+    # time_norm = jnp.sum((tau_i - jnp.mean(tau_i))**2, axis=1)
     time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
     total_error = jnp.mean(time_norm)
+    # total_error = jnp.mean((tau_i - tau_computed)**2)
 
     return total_error, tau_computed
 
@@ -208,7 +210,7 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = None
+    seed = ["MulF(LogF(LogF(AddF(SubF(k, k), AddF(a, a)))), ExpF(MulF(LogF(a), AddF(MulF(AddF(a, SubF(a, a)), a), SquareF(SubF(AddF(a, k), SquareF(ExpF(ExpF(SqrtF(a))))))))))"]
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
@@ -233,6 +235,9 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     # PLOTS
     tau_train_val = gpsr.predict(train_val_data)
     tau_test = gpsr.predict(test_data)
+
+    # from sklearn.metrics import r2_score
+    # print(r2_score(test_data.y['tau'][:, :, 0], tau_test))
 
     tau = np.vstack((train_val_data.y['tau'], test_data.y['tau']))[:, :, 0]
     tau_computed = np.vstack((tau_train_val, tau_test))
