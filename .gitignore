@@ -16,7 +16,7 @@ __pycache__/*
 *.npy
 *.txt
 *.pdf
-.ipynb_checkpoints/
+*.png
 
 # Project files
 .ropeproject

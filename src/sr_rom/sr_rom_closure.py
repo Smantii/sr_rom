@@ -16,6 +16,9 @@ import pygmo as pg
 import numpy as np
 import matplotlib.pyplot as plt
 import dctkit as dt
+from matplotlib import cm
+import os
+
 
 warnings.filterwarnings('ignore')
 config()
@@ -42,7 +45,7 @@ def compute_MSE_sol(individual: Callable, indlen: int,
     time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
     total_error = jnp.mean(time_norm)
 
-    return total_error, A_computed
+    return total_error, tau_computed
 
 
 def eval_MSE_sol(individual: Callable, indlen: int,
@@ -90,8 +93,8 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         # NLOPT solver
         prb = pg.problem(fitting_problem())
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
-        algo.extract(pg.nlopt).ftol_abs = 1e-6
-        algo.extract(pg.nlopt).ftol_rel = 1e-6
+        algo.extract(pg.nlopt).ftol_abs = 1e-4
+        algo.extract(pg.nlopt).ftol_rel = 1e-4
         algo.extract(pg.nlopt).maxeval = 1000
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
@@ -105,7 +108,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
             best_consts = []
 
     else:
-        best_fit = eval_err([])
+        best_fit = objective([])
         best_consts = []
 
     if jnp.isinf(best_fit) or jnp.isnan(best_fit):
@@ -222,6 +225,38 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     print("Best MSE on the test set: ", gpsr.score(test_data))
 
     print("Best constants = ", gpsr.best.consts)
+
+    # PLOTS
+    tau_train_val = gpsr.predict(train_val_data)
+    tau_test = gpsr.predict(test_data)
+
+    tau = np.vstack((train_val_data.y['tau'], test_data.y['tau']))[:, :, 0]
+    tau_computed = np.vstack((tau_train_val, tau_test))
+
+    re = np.concatenate((train_val_data.X, test_data.X))
+    t = np.arange(2001)
+
+    re_mesh, t_mesh = np.meshgrid(re, t)
+
+    _, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={
+        "projection": "3d"},  figsize=(20, 10))
+
+    # Plot the surface.
+    surf = ax[0].plot_surface(re_mesh, t_mesh, tau.T, cmap=cm.coolwarm,
+                              linewidth=0, antialiased=False)
+    surf_comp = ax[1].plot_surface(re_mesh, t_mesh, tau_computed.T, cmap=cm.coolwarm,
+                                   linewidth=0, antialiased=False)
+    ax[0].set_xlabel(r"$Re$")
+    ax[0].set_ylabel(r"time index")
+    ax[1].set_xlabel(r"$Re$")
+    ax[1].set_ylabel(r"time index")
+    ax[0].set_title(r"VMS-ROM Closure term")
+    ax[1].set_title(r"Approximated Closure term")
+    plt.colorbar(surf, shrink=0.5)
+    plt.colorbar(surf_comp, shrink=0.5)
+    os.chdir(output_path)
+
+    plt.savefig("data_vs_sol.png", dpi=300)
 
     print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
 
