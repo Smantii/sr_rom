@@ -184,7 +184,8 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = None
+    seed = [
+        "Div(SubF(SinF(CosF(SubF(k, a))), ExpF(SinF(CosF(a)))), Div(ExpF(a), ExpF(Div(CosF(Div(SinF(SubF(LogF(AddF(SqrtF(k), Div(k, a))), SubF(k, a))), a)), a))))"]
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,

@@ -34,6 +34,26 @@ def compute_MSE_sol(individual: Callable, indlen: int,
 
     Re_array = Re_data.X
     tau_i = Re_data.y['tau'][:, :, i]
+    a_FOM = Re_data.y['a_FOM']
+
+    tau_computed = jnp.array(
+        list(map(individual, Re_array, a_FOM[:, :, 0], a_FOM[:, :, 1], a_FOM[:, :, 2], a_FOM[:, :, 3], a_FOM[:, :, 4])))
+
+    # time_norm = jnp.sum((tau_i - jnp.mean(tau_i))**2, axis=1)
+    time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
+    total_error = jnp.mean(time_norm)
+    # total_error = jnp.mean((tau_i - tau_computed)**2)
+
+    return total_error, tau_computed
+
+
+def compute_MSE_sol_comp(individual: Callable, indlen: int,
+                         Re_data: Dataset) -> Tuple[float, List]:
+
+    i = 0
+
+    Re_array = Re_data.X
+    tau_i = Re_data.y['tau'][:, :, i]
     B_i = Re_data.y['B'][:, i, :, :]
     a_FOM = Re_data.y['a_FOM']
 
@@ -74,7 +94,8 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
     individual, n_constants = compile_individual_with_consts(tree, toolbox)
 
     def eval_err(consts):
-        def ind_with_consts(x): return individual(x, consts)
+        def ind_with_consts(x1, x2, x3, x4, x5, x6): return individual(
+            x1, x2, x3, x4, x5, x6, consts)
         total_error, _ = compute_MSE_sol(ind_with_consts, 0, Re_data)
         return total_error
 
@@ -129,7 +150,9 @@ def eval_MSE(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Too
 
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
-        def callable_with_consts(x): return callable(x, individual.consts)
+
+        def callable_with_consts(x1, x2, x3, x4, x5, x6): return callable(
+            x1, x2, x3, x4, x5, x6, individual.consts)
         objvals[i], _ = eval_MSE_sol(callable_with_consts, indlen, Re_data)
     return objvals
 
@@ -142,7 +165,9 @@ def predict(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Tool
 
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
-        def callable_with_consts(x): return callable(x, individual.consts)
+
+        def callable_with_consts(x1, x2, x3, x4, x5, x6): return callable(
+            x1, x2, x3, x4, x5, x6, individual.consts)
         _, best_sols[i] = eval_MSE_sol(callable_with_consts, indlen, Re_data)
 
     return best_sols
@@ -154,7 +179,7 @@ def fitness(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Tool
 
     attributes = []*len(individuals_batch)
 
-    for i, individual in enumerate(individuals_batch):
+    for _, individual in enumerate(individuals_batch):
         MSE, consts = eval_MSE_and_tune_constants(individual, toolbox, Re_data)
 
         # callable = toolbox.compile(expr=individual)
@@ -190,10 +215,16 @@ def assign_consts(individuals, attributes):
 
 def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, output_path):
     # pset = gp.PrimitiveSetTyped("MAIN", [float], Array)
-    pset = gp.PrimitiveSetTyped("MAIN", [float], float)
+    # pset = gp.PrimitiveSetTyped("MAIN", [float], float)
+    pset = gp.PrimitiveSetTyped("MAIN", [float] + [Array]*5, Array)
 
     # rename arguments of the tree function
     pset.renameArguments(ARG0="k")
+    pset.renameArguments(ARG1="a_1")
+    pset.renameArguments(ARG2="a_2")
+    pset.renameArguments(ARG3="a_3")
+    pset.renameArguments(ARG4="a_4")
+    pset.renameArguments(ARG5="a_5")
 
     # add constants
     pset.addTerminal(object, float, "a")
@@ -210,7 +241,7 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = ["MulF(LogF(LogF(AddF(SubF(k, k), AddF(a, a)))), ExpF(MulF(LogF(a), AddF(MulF(AddF(a, SubF(a, a)), a), SquareF(SubF(AddF(a, k), SquareF(ExpF(ExpF(SqrtF(a))))))))))"]
+    seed = None
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
