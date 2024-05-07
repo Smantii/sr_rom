@@ -15,6 +15,7 @@ from jax import jit, grad
 import pygmo as pg
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 warnings.filterwarnings('ignore')
 config()
@@ -185,7 +186,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
 
     # set seed if needed
     seed = [
-        "Div(SubF(SinF(CosF(SubF(k, a))), ExpF(SinF(CosF(a)))), Div(ExpF(a), ExpF(Div(CosF(Div(SinF(SubF(LogF(AddF(SqrtF(k), Div(k, a))), SubF(k, a))), a)), a))))"]
+        "Div(SubF(SinF(AddF(MulF(ExpF(a), MulF(a, k)), LogF(a))), AddF(a, CosF(ExpF(k)))), Div(ExpF(a), ExpF(Div(CosF(Div(SinF(SubF(a, SubF(k, a))), a)), a))))"]
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
@@ -238,22 +239,33 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     # NOTE:only for plot
     k_sample = np.linspace(min(k_data), max(k_data), 1001)
     data = Dataset("Re_data", k_sample, {'A': np.zeros((1001, 5, 5))})
-    A_i_j_computed = gpsr.predict(data)
+    A_i_j_computed_continuous = gpsr.predict(data)
 
     plt.scatter(train_val_data.X, train_val_data.y['A'][:, 0, 0],
                 c="#b2df8a", marker=".", label="Training data")
     plt.scatter(test_data.X, test_data.y['A'][:, 0, 0],
                 c="#b2df8a", marker="*", label="Test data")
-    plt.plot(k_sample, A_i_j_computed, c="#1f78b4", label="Best solution")
-    # plt.plot(k_ord, A_i_j_computed_ord, c="#1f78b4", label="Best solution")
+    plt.plot(k_sample, A_i_j_computed_continuous, c="#1f78b4", label="Best solution")
+    plt.xlabel(r"$Re$")
+    plt.ylabel(r"$A_{ij}$")
+    plt.legend(loc="upper right")
+
+    os.chdir(output_path)
+
+    plt.savefig("data_vs_sol_cont.png", dpi=300)
+
+    plt.clf()
+
+    plt.scatter(train_val_data.X, train_val_data.y['A'][:, 0, 0],
+                c="#b2df8a", marker=".", label="Training data")
+    plt.scatter(test_data.X, test_data.y['A'][:, 0, 0],
+                c="#b2df8a", marker="*", label="Test data")
+    plt.scatter(k_data, A_i_j_computed, c="#1f78b4", marker='.', label="Best solution")
     plt.xlabel(r"$Re$")
     plt.ylabel(r"$A_{ij}$")
     plt.legend(loc="lower right")
 
-    import os
-    os.chdir(output_path)
-
-    plt.savefig("data_vs_sol.pdf", dpi=300)
+    plt.savefig("data_vs_sol.png", dpi=300)
 
     print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
 
