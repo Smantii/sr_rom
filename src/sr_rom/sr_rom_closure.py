@@ -80,7 +80,7 @@ def eval_MSE_sol(individual: Callable, indlen: int,
 
     config()
 
-    total_error, A_computed = compute_MSE_sol_comp(individual, indlen, Re_data)
+    total_error, A_computed = compute_MSE_sol(individual, indlen, Re_data)
 
     if jnp.isnan(total_error) or total_error > 1e6:
         total_error = 1e6
@@ -94,8 +94,9 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
     individual, n_constants = compile_individual_with_consts(tree, toolbox)
 
     def eval_err(consts):
-        def ind_with_consts(x1): return individual(x1, consts)
-        total_error, _ = compute_MSE_sol_comp(ind_with_consts, 0, Re_data)
+        def ind_with_consts(x1, x2, x3, x4, x5, x6): return individual(
+            x1, x2, x3, x4, x5, x6, consts)
+        total_error, _ = compute_MSE_sol(ind_with_consts, 0, Re_data)
         return total_error
 
     objective = jit(eval_err)
@@ -150,8 +151,8 @@ def eval_MSE(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Too
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
 
-        def callable_with_consts(x1): return callable(
-            x1, individual.consts)
+        def callable_with_consts(x1, x2, x3, x4, x5, x6): return callable(
+            x1, x2, x3, x4, x5, x6, individual.consts)
         objvals[i], _ = eval_MSE_sol(callable_with_consts, indlen, Re_data)
     return objvals
 
@@ -165,8 +166,8 @@ def predict(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Tool
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
 
-        def callable_with_consts(x1): return callable(
-            x1, individual.consts)
+        def callable_with_consts(x1, x2, x3, x4, x5, x6): return callable(
+            x1, x2, x3, x4, x5, x6, individual.consts)
         _, best_sols[i] = eval_MSE_sol(callable_with_consts, indlen, Re_data)
 
     return best_sols
@@ -214,16 +215,16 @@ def assign_consts(individuals, attributes):
 
 def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, output_path):
     # pset = gp.PrimitiveSetTyped("MAIN", [float], Array)
-    pset = gp.PrimitiveSetTyped("MAIN", [float], float)
-    # pset = gp.PrimitiveSetTyped("MAIN", [float] + [Array]*5, Array)
+    # pset = gp.PrimitiveSetTyped("MAIN", [float], float)
+    pset = gp.PrimitiveSetTyped("MAIN", [float] + [Array]*5, Array)
 
     # rename arguments of the tree function
     pset.renameArguments(ARG0="k")
-    # pset.renameArguments(ARG1="a_1")
-    # pset.renameArguments(ARG2="a_2")
-    # pset.renameArguments(ARG3="a_3")
-    # pset.renameArguments(ARG4="a_4")
-    # pset.renameArguments(ARG5="a_5")
+    pset.renameArguments(ARG1="a_1")
+    pset.renameArguments(ARG2="a_2")
+    pset.renameArguments(ARG3="a_3")
+    pset.renameArguments(ARG4="a_4")
+    pset.renameArguments(ARG5="a_5")
 
     # add constants
     pset.addTerminal(object, float, "a")
