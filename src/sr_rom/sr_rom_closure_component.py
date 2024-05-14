@@ -77,7 +77,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
         algo.extract(pg.nlopt).ftol_abs = 1e-4
         algo.extract(pg.nlopt).ftol_rel = 1e-4
-        algo.extract(pg.nlopt).maxeval = 1000
+        algo.extract(pg.nlopt).maxeval = 10
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)
@@ -185,8 +185,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = [
-        "Div(SubF(SinF(AddF(MulF(ExpF(a), MulF(a, k)), LogF(a))), AddF(a, CosF(ExpF(k)))), Div(ExpF(a), ExpF(Div(CosF(Div(SinF(SubF(a, SubF(k, a))), a)), a))))"]
+    seed = None
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
@@ -202,6 +201,8 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
         gpsr.fit(train_data, val_data)
     else:
         gpsr.fit(train_val_data)
+
+    print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
 
     # recover the solution associated to the best individual among all the populations
     # comp_best = gpsr.predict(train_data)
@@ -267,7 +268,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
 
     plt.savefig("data_vs_sol.png", dpi=300)
 
-    print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
+    # print(f"Elapsed time: {round(time.perf_counter() - start, 2)}")
 
 
 if __name__ == "__main__":

@@ -121,7 +121,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
         algo.extract(pg.nlopt).ftol_abs = 1e-4
         algo.extract(pg.nlopt).ftol_rel = 1e-4
-        algo.extract(pg.nlopt).maxeval = 1000
+        algo.extract(pg.nlopt).maxeval = 10
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)
@@ -241,7 +241,7 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     common_params = {'penalty': penalty}
 
     # set seed if needed
-    seed = None
+    seed = ["sc_mul(Mul(Exp(Add(Sub(a_4, a_4), Add(a_1, a_2))), Exp(Square(Sin(a_3)))), MulF(CosF(LogF(Div(SquareF(a), AddF(a, a)))), Div(a, k)))"]
 
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,

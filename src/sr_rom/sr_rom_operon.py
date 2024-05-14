@@ -7,6 +7,7 @@ import time
 
 # load and process data
 Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+
 train_data, val_data, train_val_data, test_data = split_data(
     Re, 1000*A, 1000*B, tau, a_FOM)
 
@@ -26,10 +27,10 @@ j = 0
 val_score = -np.inf
 curr_model = None
 
-reps = 1
+reps = 40
 
 # symbols = "add,mul,sub,div,fmin,fmax,aq,pow,abs,acos,asin,atan,cbrt,ceil,cos,cosh,exp,floor,log,logabs,log1p,sin,sinh,sqrt,sqrtabs,tan,tanh,square,constant,variable"
-symbols = 'add,sub,mul,sin,cos,exp,log,constant,variable'
+symbols = 'add,sub,mul,sin,cos,constant,variable'
 
 tic = time.time()
 for rep in range(reps):
@@ -37,7 +38,7 @@ for rep in range(reps):
         allowed_symbols=symbols,
         offspring_generator='basic',
         optimizer_iterations=10,
-        max_length=500,
+        max_length=100,
         initialization_method='btc',
         n_threads=16,
         objectives=['mse'],
