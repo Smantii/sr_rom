@@ -27,10 +27,10 @@ j = 0
 val_score = -np.inf
 curr_model = None
 
-reps = 40
+reps = 1
 
 # symbols = "add,mul,sub,div,fmin,fmax,aq,pow,abs,acos,asin,atan,cbrt,ceil,cos,cosh,exp,floor,log,logabs,log1p,sin,sinh,sqrt,sqrtabs,tan,tanh,square,constant,variable"
-symbols = 'add,sub,mul,sin,cos,constant,variable'
+symbols = 'add,sub,mul,exp,log,constant,variable'
 
 tic = time.time()
 for rep in range(reps):
@@ -40,7 +40,7 @@ for rep in range(reps):
         optimizer_iterations=10,
         max_length=100,
         initialization_method='btc',
-        n_threads=16,
+        n_threads=32,
         objectives=['mse'],
         epsilon=0,
         random_state=None,
@@ -58,7 +58,7 @@ for rep in range(reps):
         curr_model = reg
         print(rep, val_score)
 toc = time.time()
-print(toc-tic)
+print("Time", toc-tic)
 # print(curr_model.pareto_front_)
 print(curr_model.stats_)
 

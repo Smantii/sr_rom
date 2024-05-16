@@ -109,21 +109,28 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     A_conv = A.copy()
     B_conv = B.copy()
 
-    for i in range(5):
-        for j in range(5):
-            A_conv[:, i, j] = np.convolve(A[:, i, j], np.ones(w), 'same') / w
-
-    for i in range(5):
-        for j in range(5):
-            for k in range(5):
-                B_conv[:, i, j, k] = np.convolve(B[:, i, j, k], np.ones(w), 'same') / w
-
+    # NOTE: extend this for all the components of tau
     tau_conv = np.zeros_like(tau[:, :, 0])
 
-    for i in range(2001):
-        tau_conv[:, i] = np.convolve(tau[:, i, 0], np.ones(3), 'same') / 3
+    for _ in range(2):
 
-    tau[:, :, 0] = tau_conv
+        for i in range(5):
+            for j in range(5):
+                A_conv[:, i, j] = np.convolve(A[:, i, j], np.ones(w), 'same') / w
+
+        for i in range(5):
+            for j in range(5):
+                for k in range(5):
+                    B_conv[:, i, j, k] = np.convolve(
+                        B[:, i, j, k], np.ones(w), 'same') / w
+
+        A = A_conv
+        B = B_conv
+
+        for i in range(2001):
+            tau_conv[:, i] = np.convolve(tau[:, i, 0], np.ones(w), 'same') / w
+
+        tau[:, :, 0] = tau_conv
 
     return Re, A_conv, B_conv, tau, a_FOM
 
