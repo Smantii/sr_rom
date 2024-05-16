@@ -78,7 +78,17 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
+    dir_list.remove("Re208")
+    dir_list.remove("Re210")
+    dir_list.remove("Re242")
+    dir_list.remove("Re260")
+    dir_list.remove("Re282")
+    dir_list.remove("Re294")
     dir_list.remove("Re225")
+    dir_list.remove("Re274")
+    dir_list.remove("Re275")
+    dir_list.remove("Re285")
+    dir_list.remove("Re300")
     num_data = len(dir_list)
 
     Re = np.zeros(num_data)
