@@ -32,14 +32,13 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 
             num_runs = 0
 
-            while val_score <= 0.5:
+            while val_score <= 0.8:
                 num_runs += 1
                 reg = SymbolicRegressor(
                     allowed_symbols=symbols,
                     offspring_generator='basic',
                     optimizer_iterations=10,
-                    max_length=50,
-                    initialization_max_length=20,
+                    max_length=25,
                     initialization_method='btc',
                     n_threads=32,
                     objectives=['mse'],
@@ -54,12 +53,10 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 
                 reg.fit(X_train, y_train)
                 curr_val_score = reg.score(X_val, y_val)
-                if curr_val_score >= val_score:
+                if curr_val_score > val_score:
                     val_score = curr_val_score
                     best_model = reg
-                    print("Update!", val_score)
-                # else:
-                #    print(val_score)
+                    print("Update!", curr_val_score)
 
             train_val_score = best_model.score(X_train_val, y_train_val)
             test_score = best_model.score(X_test, y_test)

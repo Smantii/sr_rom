@@ -37,7 +37,7 @@ def split_data(Re, A, B, tau, a_FOM):
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
         Re, np.arange(num_data), test_size=0.1, random_state=42, shuffle=False)
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
-        Re_train_val, idx_train_val, test_size=3/9, random_state=42, shuffle=False)
+        Re_train_val, idx_train_val, test_size=2/9, random_state=42, shuffle=False)
 
     A_train = A[idx_train]
     A_train_val = A[idx_train_val]
@@ -78,7 +78,6 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    dir_list.remove("Re225")
     num_data = len(dir_list)
 
     Re = np.zeros(num_data)
@@ -105,7 +104,7 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
         tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
 
-    w = 4
+    w = 6
     A_conv = A.copy()
     B_conv = B.copy()
 
