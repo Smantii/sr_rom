@@ -24,8 +24,7 @@ config()
 num_cpus = 2
 
 
-def eval_MSE_sol(individual: Callable, indlen: int,
-                 Re_data: Dataset) -> Tuple[float, List]:
+def eval_MSE_sol(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
 
     warnings.filterwarnings('ignore')
 
@@ -100,19 +99,19 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
 
 
 @ray.remote(num_cpus=num_cpus)
-def eval_MSE(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox,
+def eval_MSE(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
              Re_data: Dataset, penalty: float) -> float:
     objvals = [None]*len(individuals_batch)
 
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
         def callable_with_consts(x): return callable(x, individual.consts)
-        objvals[i], _ = eval_MSE_sol(callable_with_consts, indlen, Re_data)
+        objvals[i], _ = eval_MSE_sol(callable_with_consts, Re_data)
     return objvals
 
 
 @ray.remote(num_cpus=num_cpus)
-def predict(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox,
+def predict(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
             Re_data: Dataset, penalty: float) -> List:
 
     best_sols = [None]*len(individuals_batch)
@@ -120,13 +119,13 @@ def predict(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Tool
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
         def callable_with_consts(x): return callable(x, individual.consts)
-        _, best_sols[i] = eval_MSE_sol(callable_with_consts, indlen, Re_data)
+        _, best_sols[i] = eval_MSE_sol(callable_with_consts, Re_data)
 
     return best_sols
 
 
 @ray.remote(num_cpus=num_cpus)
-def fitness(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Toolbox,
+def fitness(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
             Re_data: Dataset, penalty: float) -> Tuple[float, ]:
 
     attributes = []*len(individuals_batch)
@@ -135,7 +134,7 @@ def fitness(individuals_batch: list[gp.PrimitiveSet], indlen: int, toolbox: Tool
         MSE, consts = eval_MSE_and_tune_constants(individual, toolbox, Re_data)
 
         # callable = toolbox.compile(expr=individual)
-        # MSE, _ = eval_MSE_sol(callable, indlen, Re_data)
+        # MSE, _ = eval_MSE_sol(callable, Re_data)
 
         # add penalty on length of the tree to promote simpler solutions
         fitness = (MSE + penalty["reg_param"]*len(individual),)
@@ -190,8 +189,7 @@ def sr_rom(config_file_data, train_data, val_data, test_data, output_path):
     gpsr = gps.GPSymbolicRegressor(
         pset=pset, fitness=fitness.remote,
         error_metric=eval_MSE.remote, predict_func=predict.remote,
-        feature_extractors=[len], print_log=True,
-        common_data=common_params, config_file_data=config_file_data,
+        print_log=True, common_data=common_params, config_file_data=config_file_data,
         save_best_individual=True, save_train_fit_history=True,
         plot_best_individual_tree=False, callback_func=assign_consts,
         output_path=output_path, batch_size=1, seed=seed)

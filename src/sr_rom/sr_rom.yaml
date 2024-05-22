@@ -1,7 +1,7 @@
 # template for sr_rom parameters file
 gp:
-  NINDIVIDUALS: 1
-  NGEN: 1
+  NINDIVIDUALS: 100
+  NGEN: 10
   multi_island:
     num_islands: 1
     migration: { "freq": 10, "frac": 0.05 }

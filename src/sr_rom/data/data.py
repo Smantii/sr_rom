@@ -104,36 +104,37 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
         tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
 
-    w = 6
+    return Re, A, B, tau, a_FOM
+
+
+def smooth_data(A, B, tau, w, num_smoothing, r):
     A_conv = A.copy()
     B_conv = B.copy()
 
-    # return Re, A_conv, B_conv, tau, a_FOM
+    tau_conv = np.zeros_like(tau)
 
-    # NOTE: extend this for all the components of tau
-    tau_conv = np.zeros_like(tau[:, :, 0])
+    for _ in range(num_smoothing):
 
-    for _ in range(2):
-
-        for i in range(5):
-            for j in range(5):
+        for i in range(r):
+            for j in range(r):
                 A_conv[:, i, j] = np.convolve(A[:, i, j], np.ones(w), 'same') / w
 
-        for i in range(5):
-            for j in range(5):
-                for k in range(5):
+        for i in range(r):
+            for j in range(r):
+                for k in range(r):
                     B_conv[:, i, j, k] = np.convolve(
                         B[:, i, j, k], np.ones(w), 'same') / w
 
         A = A_conv
         B = B_conv
 
-        for i in range(2001):
-            tau_conv[:, i] = np.convolve(tau[:, i, 0], np.ones(w), 'same') / w
+        for i in range(r):
+            for j in range(2001):
+                tau_conv[:, j, i] = np.convolve(tau[:, j, i], np.ones(w), 'same') / w
 
-        tau[:, :, 0] = tau_conv
+        tau = tau_conv
 
-    return Re, A_conv, B_conv, tau, a_FOM
+    return A_conv, B_conv, tau_conv
 
 
 if __name__ == "__main__":

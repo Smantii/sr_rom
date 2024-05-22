@@ -18,6 +18,8 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
     print("Started!")
     for i in range(5):
         for j in range(5):
+            i = 1
+            j = 4
             X_train = train_data.X.reshape(-1, 1)
             y_train = train_data.y["A"][:, i, j]
             X_val = val_data.X.reshape(-1, 1)
@@ -120,7 +122,7 @@ if __name__ == "__main__":
     train_data, val_data, train_val_data, test_data = split_data(
         Re, 1000*A, 1000*B, tau, a_FOM)
 
-    symbols = 'add,sub,mul,sin,cos,constant,variable'
+    symbols = 'add,sub,mul,sin,cos,exp,log,sqrt,square,constant,variable'
 
     output_path = sys.argv[1]
     sr_rom_operon(train_data, val_data, train_val_data,
