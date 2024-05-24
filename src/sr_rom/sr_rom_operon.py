@@ -1,5 +1,5 @@
 from pyoperon.sklearn import SymbolicRegressor
-from sr_rom.data.data import process_data, split_data
+from sr_rom.data.data import process_data, split_data, smooth_data
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -18,8 +18,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
     print("Started!")
     for i in range(5):
         for j in range(5):
-            i = 1
-            j = 4
+            # for k in range(5):
             X_train = train_data.X.reshape(-1, 1)
             y_train = train_data.y["A"][:, i, j]
             X_val = val_data.X.reshape(-1, 1)
@@ -40,7 +39,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
                     allowed_symbols=symbols,
                     offspring_generator='basic',
                     optimizer_iterations=10,
-                    max_length=25,
+                    max_length=150,
                     initialization_method='btc',
                     n_threads=32,
                     objectives=['mse'],
@@ -95,7 +94,8 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 
             plt.clf()
 
-            k_sample = np.linspace(X_train[0], X_test[-1], 1001).reshape(-1, 1)
+            k_sample = np.linspace(np.min(X_train_val),
+                                   X_test[-1], 1001).reshape(-1, 1)
             prediction = best_model.predict(k_sample)
 
             plt.scatter(X_train, y_train,
@@ -104,7 +104,8 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
                         c="#b2df8a", marker="h", label="Val data")
             plt.scatter(X_test, y_test,
                         c="#b2df8a", marker="*", label="Test data")
-            plt.plot(k_sample, prediction, c="#1f78b4", label="Best sol", linewidth=0.5)
+            plt.plot(k_sample, prediction, c="#1f78b4",
+                     label="Best sol", linewidth=0.5)
             plt.xlabel(r"$Re$")
             plt.ylabel(r"$A_{ij}$")
             plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
@@ -118,11 +119,12 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 if __name__ == "__main__":
     # load and process data
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+    # A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
 
     train_data, val_data, train_val_data, test_data = split_data(
         Re, 1000*A, 1000*B, tau, a_FOM)
 
-    symbols = 'add,sub,mul,sin,cos,exp,log,sqrt,square,constant,variable'
+    symbols = 'add,sub,mul,sin,cos,sqrt,square,pow,acos,asin,atan,constant,variable'
 
     output_path = sys.argv[1]
     sr_rom_operon(train_data, val_data, train_val_data,
