@@ -59,7 +59,7 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
     plt.savefig(prb_name + "_cont", dpi=300)
-    print(f"{prb_name} learned in {num_runs} runs!")
+    print(f"{prb_name} learned in {num_runs} runs!", flush=True)
 
     plt.clf()
 
@@ -96,7 +96,7 @@ def run(X_train, y_train, X_val, y_val):
         if curr_val_score > val_score:
             val_score = curr_val_score
             best_model = reg
-            print("Update!", curr_val_score)
+            print("Update!", curr_val_score, flush=True)
 
     return best_model, num_runs
 
@@ -108,7 +108,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
     with open("scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
-    print("Started training procedure for A")
+    print("Started training procedure for A", flush=True)
     # training procedure for A
     for i in range(5):
         for j in range(5):
@@ -127,7 +127,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
                          X_train_val, y_train_val, X_test, y_test,
                          num_runs, "A_" + str(i) + str(j), r"$A_{ij}$")
 
-    print("Done!")
+    print("Done!", flush=True)
 
     # training procedure for B
     print("Started training procedure for B")
@@ -149,7 +149,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
                              X_train_val, y_train_val, X_test, y_test,
                              num_runs, "B_" + str(i) + str(j) + str(k), r"$B_{ijk}$")
 
-    print("Done!")
+    print("Done!", flush=True)
 
 
 if __name__ == "__main__":
