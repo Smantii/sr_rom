@@ -12,7 +12,7 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
     train_val_score = best_model.score(X_train_val, y_train_val)
     test_score = best_model.score(X_test, y_test)
 
-    str_model = best_model.get_model_string(best_model.model_)
+    str_model = best_model.get_model_string(best_model.model_, precision=5)
 
     Re_data = np.sort(np.concatenate((X_train_val, X_test)),
                       axis=0).reshape(-1, 1)
@@ -71,13 +71,13 @@ def run(X_train, y_train, X_val, y_val):
 
     num_runs = 0
 
-    while train_score <= 0.7 or val_score <= 0.7:
+    while train_score <= 0.8 or val_score <= 0.8:
         num_runs += 1
         reg = SymbolicRegressor(
             allowed_symbols=symbols,
             offspring_generator='basic',
             optimizer_iterations=10,
-            max_length=20,
+            max_length=40,
             initialization_method='btc',
             n_threads=32,
             objectives=['r2'],
@@ -96,8 +96,7 @@ def run(X_train, y_train, X_val, y_val):
         if curr_val_score > val_score:
             val_score = curr_val_score
             best_model = reg
-            # print("Update!", curr_val_score,
-            #      best_model.score(X_test, y_test))
+            print("Update!", curr_val_score)
 
     return best_model, num_runs
 
@@ -156,7 +155,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 if __name__ == "__main__":
     # load and process data
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=7, num_smoothing=2, r=5)
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 
     train_data, val_data, train_val_data, test_data = split_data(
         Re, 1000*A_conv, 1000*B_conv, tau_conv, a_FOM)

@@ -35,9 +35,9 @@ def split_data(Re, A, B, tau, a_FOM):
     num_data = len(Re)
 
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
-        Re, np.arange(num_data), test_size=0.1, random_state=42, shuffle=False)
+        Re, np.arange(num_data), test_size=0.2, random_state=42, shuffle=True)
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
-        Re_train_val, idx_train_val, test_size=2/9, random_state=42, shuffle=True)
+        Re_train_val, idx_train_val, test_size=2/8, random_state=42, shuffle=True)
 
     A_train = A[idx_train]
     A_train_val = A[idx_train_val]
