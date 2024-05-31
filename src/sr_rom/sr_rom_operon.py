@@ -10,7 +10,11 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
                  X_test, y_test, num_runs, prb_name, ylabel):
 
     train_val_score = best_model.score(X_train_val, y_train_val)
-    test_score = best_model.score(X_test, y_test)
+    test_pred = best_model.predict(X_test)
+    if not np.any(np.isnan(test_pred)):
+        test_score = best_model.score(X_test, y_test)
+    else:
+        test_score = -1000
 
     str_model = best_model.get_model_string(best_model.model_, precision=5)
 
@@ -27,10 +31,10 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
 
     np.save(prb_name + "_pred", prediction)
 
-    plt.scatter(X_train, y_train,
+    plt.scatter(X_train_val, y_train_val,
                 c="#b2df8a", marker=".", label="Training data")
-    plt.scatter(X_val, y_val,
-                c="#b2df8a", marker="s", label="Val data")
+    # plt.scatter(X_val, y_val,
+    #           c="#b2df8a", marker="s", label="Val data")
     plt.scatter(X_test, y_test,
                 c="#b2df8a", marker="*", label="Test data")
     plt.scatter(Re_data, prediction, c="#1f78b4", marker='x',
@@ -46,10 +50,10 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
     k_sample = np.linspace(Re_data[0], Re_data[-1], 1001).reshape(-1, 1)
     prediction = best_model.predict(k_sample)
 
-    plt.scatter(X_train, y_train,
+    plt.scatter(X_train_val, y_train_val,
                 c="#b2df8a", marker=".", label="Training data")
-    plt.scatter(X_val, y_val,
-                c="#b2df8a", marker="h", label="Val data")
+    # plt.scatter(X_val, y_val,
+    #            c="#b2df8a", marker="h", label="Val data")
     plt.scatter(X_test, y_test,
                 c="#b2df8a", marker="*", label="Test data")
     plt.plot(k_sample, prediction, c="#1f78b4",
@@ -64,14 +68,14 @@ def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_tra
     plt.clf()
 
 
-def run(X_train, y_train, X_val, y_val):
+def run(X_train, y_train, X_val, y_val, X_train_val, y_train_val):
     train_score = -np.inf
     val_score = -np.inf
     best_model = None
 
     num_runs = 0
 
-    while train_score <= 0.8 or val_score <= 0.8:
+    while train_score <= 0.7 or val_score <= 0.7:
         num_runs += 1
         reg = SymbolicRegressor(
             allowed_symbols=symbols,
@@ -90,13 +94,15 @@ def run(X_train, y_train, X_val, y_val):
 
         )
 
-        reg.fit(X_train, y_train)
-        train_score = reg.score(X_train, y_train)
-        curr_val_score = reg.score(X_val, y_val)
-        if curr_val_score > val_score:
-            val_score = curr_val_score
-            best_model = reg
-            print("Update!", curr_val_score, flush=True)
+        reg.fit(X_train_val, y_train_val)
+        train_score = reg.score(X_train_val, y_train_val)
+        best_model = reg
+        break
+        # curr_val_score = reg.score(X_val, y_val)
+        # if curr_val_score > val_score:
+        #    val_score = curr_val_score
+        #    best_model = reg
+        #    print("Update!", curr_val_score, flush=True)
 
     return best_model, num_runs
 
@@ -121,7 +127,8 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
             X_test = test_data.X.reshape(-1, 1)
             y_test = test_data.y["A"][:, i, j]
 
-            best_model, num_runs = run(X_train, y_train, X_val, y_val)
+            best_model, num_runs = run(
+                X_train, y_train, X_val, y_val, X_train_val, y_train_val)
 
             save_results(best_model, X_train, y_train, X_val,  y_val,
                          X_train_val, y_train_val, X_test, y_test,
@@ -143,7 +150,8 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
                 X_test = test_data.X.reshape(-1, 1)
                 y_test = test_data.y["B"][:, i, j, k]
 
-                best_model, num_runs = run(X_train, y_train, X_val, y_val)
+                best_model, num_runs = run(
+                    X_train, y_train, X_val, y_val, X_train_val, y_train_val)
 
                 save_results(best_model, X_train, y_train, X_val,  y_val,
                              X_train_val, y_train_val, X_test, y_test,
@@ -155,7 +163,7 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 if __name__ == "__main__":
     # load and process data
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
 
     train_data, val_data, train_val_data, test_data = split_data(
         Re, 1000*A_conv, 1000*B_conv, tau_conv, a_FOM)
