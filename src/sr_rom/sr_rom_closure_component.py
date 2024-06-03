@@ -1,6 +1,6 @@
 import warnings
 import jax.numpy as jnp
-from sr_rom.data.data import process_data, split_data
+from sr_rom.data.data import process_data, split_data, smooth_data
 from alpine.data import Dataset
 from alpine.gp import gpsymbreg as gps
 from typing import Callable, Tuple, List
@@ -279,8 +279,9 @@ if __name__ == "__main__":
     # from sr_rom.data.data import generate_toy_data
     # k_array, A_B_list = generate_toy_data(5)
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
     train_data, val_data, train_val_data, test_data = split_data(
-        Re, 1000*A, 1000*B, tau, a_FOM)
+        Re, 1000*A_conv, 1000*B_conv, tau_conv, a_FOM)
 
     if n_args >= 3:
         output_path = sys.argv[2]

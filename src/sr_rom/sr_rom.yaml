@@ -29,33 +29,33 @@ gp:
   immigration: { "enabled": False, "freq": 10, "frac": 0.9 }
   primitives:
     imports: {"alpine.gp.jax_primitives": ["jax_primitives"],
-              "sr_rom.primitives": ["array_primitives"]
+              #"sr_rom.primitives": ["array_primitives"]
               }  
     used: [
       {"name": "AddF", "dimension": None, "rank": None},
       {"name": "SubF", "dimension": None, "rank": None},
       {"name": "MulF", "dimension": None, "rank": None},
-      {"name": "Div", "dimension": None, "rank": None},
-      {"name": "ExpF", "dimension": None, "rank": None},
-      {"name": "LogF", "dimension": None, "rank": None},
+      #{"name": "Div", "dimension": None, "rank": None},
+      #{"name": "ExpF", "dimension": None, "rank": None},
+      #{"name": "LogF", "dimension": None, "rank": None},
       {"name": "SinF", "dimension": None, "rank": None},
       {"name": "CosF", "dimension": None, "rank": None},
       {"name": "ArcsinF", "dimension": None, "rank": None},
       {"name": "ArccosF", "dimension": None, "rank": None},
       {"name": "SqrtF", "dimension": None, "rank": None},
       {"name": "SquareF", "dimension": None, "rank": None},
-      {"name": "Add", "dimension": None, "rank": None},
-      {"name": "Sub", "dimension": None, "rank": None},
-      {"name": "Mul", "dimension": None, "rank": None},
-      {"name": "Sin", "dimension": None, "rank": None},
-      {"name": "Arcsin", "dimension": None, "rank": None},
-      {"name": "Cos", "dimension": None, "rank": None},
-      {"name": "Arccos", "dimension": None, "rank": None},
-      {"name": "Exp", "dimension": None, "rank": None},
-      {"name": "Log", "dimension": None, "rank": None},
-      {"name": "Sqrt", "dimension": None, "rank": None},
-      {"name": "Square", "dimension": None, "rank": None},
-      {"name": "sc_mul", "dimension": None, "rank": None}
+      #{"name": "Add", "dimension": None, "rank": None},
+      #{"name": "Sub", "dimension": None, "rank": None},
+      #{"name": "Mul", "dimension": None, "rank": None},
+      #{"name": "Sin", "dimension": None, "rank": None},
+      #{"name": "Arcsin", "dimension": None, "rank": None},
+      #{"name": "Cos", "dimension": None, "rank": None},
+      #{"name": "Arccos", "dimension": None, "rank": None},
+      #{"name": "Exp", "dimension": None, "rank": None},
+      #{"name": "Log", "dimension": None, "rank": None},
+      #{"name": "Sqrt", "dimension": None, "rank": None},
+      #{"name": "Square", "dimension": None, "rank": None},
+      #{"name": "sc_mul", "dimension": None, "rank": None}
       ]
   residual_formulation: False
 
