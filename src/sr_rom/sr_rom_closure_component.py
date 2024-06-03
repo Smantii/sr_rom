@@ -34,11 +34,12 @@ def eval_MSE_sol(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
     A_0_0 = Re_data.y['A'][:, 0, 0]
 
     component_computed = individual(k_array)
-    total_error = jnp.mean((component_computed - A_0_0)**2)
+    total_error = jnp.sum((component_computed - A_0_0)**2)
+    r_2 = 1 - total_error/jnp.sum((A_0_0 - np.mean(A_0_0))**2)
 
     if jnp.isnan(total_error) or total_error > 1e6:
-        total_error = 1e6
-    return total_error, component_computed
+        r_2 = -1e6
+    return -r_2, component_computed
 
 
 def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
@@ -51,8 +52,9 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         A_0_0 = Re_data.y['A'][:, 0, 0]
 
         component_computed = individual(k_array, consts)
-        total_error = jnp.mean((component_computed - A_0_0)**2)
-        return total_error
+        total_error = jnp.sum((component_computed - A_0_0)**2)
+        r_2 = 1 - total_error/jnp.sum((A_0_0 - np.mean(A_0_0))**2)
+        return -r_2
 
     objective = jit(eval_err)
 
@@ -76,7 +78,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
         algo.extract(pg.nlopt).ftol_abs = 1e-4
         algo.extract(pg.nlopt).ftol_rel = 1e-4
-        algo.extract(pg.nlopt).maxeval = 10
+        algo.extract(pg.nlopt).maxeval = 1000
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)
