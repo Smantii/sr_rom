@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import sys
+import time
 
 
 def save_results(best_model, X_train, y_train, X_val,  y_val, X_train_val, y_train_val,
@@ -94,7 +95,10 @@ def run(X_train, y_train, X_val, y_val, X_train_val, y_train_val):
 
         )
 
+        tic = time.time()
         reg.fit(X_train_val, y_train_val)
+        toc = time.time()
+        print(toc-tic, reg.stats_)
         train_score = reg.score(X_train_val, y_train_val)
         best_model = reg
         break
