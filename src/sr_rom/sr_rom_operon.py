@@ -4,6 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import sys
+from sklearn.model_selection import GridSearchCV
+import time
+import warnings
+
+# suppress warnings
+warnings.filterwarnings("ignore")
 
 
 def save_results(reg, X_train_val, y_train_val, X_test, y_test,  prb_name, ylabel):
@@ -63,8 +69,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,  prb_name, ylabe
     plt.clf()
 
 
-def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, output_path):
-
+def sr_rom_operon(train_val_data, test_data, symbols, output_path):
     os.chdir(output_path)
 
     with open("scores.txt", "a") as text_file:
@@ -74,27 +79,44 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
     # training procedure for A
     for i in range(5):
         for j in range(5):
-            X_train = train_data.X.reshape(-1, 1)
-            y_train = train_data.y["A"][:, i, j]
-            X_val = val_data.X.reshape(-1, 1)
-            y_val = val_data.y["A"][:, i, j]
             X_train_val = train_val_data.X.reshape(-1, 1)
             y_train_val = train_val_data.y["A"][:, i, j]
             X_test = test_data.X.reshape(-1, 1)
             y_test = test_data.y["A"][:, i, j]
 
+            # Standardization
+            train_Re_norm = (X_train_val - np.mean(X_train_val))/np.std(X_train_val)
+            train_comp_norm = (y_train_val - np.mean(y_train_val)) / \
+                np.std(y_train_val)
+            test_Re_norm = (X_test - np.mean(X_train_val))/np.std(X_train_val)
+            test_comp_norm = (y_test - np.mean(y_train_val))/np.std(y_train_val)
+
             reg = SymbolicRegressor(
                 allowed_symbols=symbols,
                 optimizer_iterations=10,
-                max_length=40,
-                n_threads=32,
+                # max_length=40,
+                n_threads=16,
                 epsilon=0,
                 max_evaluations=int(1e6),
-                tournament_size=3)
+                # tournament_size=3
+            )
 
-            reg.fit(X_train_val, y_train_val)
+            params = {
+                'max_length': [20, 30, 40],
+                'tournament_size': [2, 3],
+            }
 
-            save_results(reg, X_train_val, y_train_val, X_test, y_test,
+            gs = GridSearchCV(reg, params, cv=5, verbose=3, refit=True, n_jobs=6)
+            tic = time.time()
+            gs.fit(train_Re_norm, train_comp_norm)
+            toc = time.time()
+            print(toc-tic)
+
+            # reg.fit(X_train_val, y_train_val)
+
+            print(gs.cv_results_['mean_test_score'])
+
+            save_results(gs.best_estimator_, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                          "A_" + str(i) + str(j), r"$A_{ij}$")
 
     print("Done!", flush=True)
@@ -104,28 +126,45 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
     for i in range(5):
         for j in range(5):
             for k in range(5):
-                X_train = train_data.X.reshape(-1, 1)
-                y_train = train_data.y["B"][:, i, j, k]
-                X_val = val_data.X.reshape(-1, 1)
-                y_val = val_data.y["B"][:, i, j, k]
                 X_train_val = train_val_data.X.reshape(-1, 1)
                 y_train_val = train_val_data.y["B"][:, i, j, k]
                 X_test = test_data.X.reshape(-1, 1)
                 y_test = test_data.y["B"][:, i, j, k]
 
+                # Standardization
+                train_Re_norm = (X_train_val - np.mean(X_train_val))/np.std(X_train_val)
+                train_comp_norm = (y_train_val - np.mean(y_train_val)) / \
+                    np.std(y_train_val)
+                test_Re_norm = (X_test - np.mean(X_train_val))/np.std(X_train_val)
+                test_comp_norm = (y_test - np.mean(y_train_val))/np.std(y_train_val)
+
                 reg = SymbolicRegressor(
                     allowed_symbols=symbols,
                     optimizer_iterations=10,
-                    max_length=40,
-                    n_threads=32,
+                    # max_length=40,
+                    n_threads=16,
                     epsilon=0,
                     max_evaluations=int(1e6),
-                    tournament_size=3)
+                    # tournament_size=3
+                )
 
-                reg.fit(X_train_val, y_train_val)
+                params = {
+                    'max_length': [20, 30, 40],
+                    'tournament_size': [2, 3],
+                }
 
-                save_results(reg, X_train_val, y_train_val, X_test, y_test,
-                             "B_" + str(i) + str(j) + str(k), r"$B_{ijk}$")
+                gs = GridSearchCV(reg, params, cv=5, verbose=3, refit=True, n_jobs=6)
+                tic = time.time()
+                gs.fit(train_Re_norm, train_comp_norm)
+                toc = time.time()
+                print(toc-tic)
+
+                # reg.fit(X_train_val, y_train_val)
+
+                print(gs.cv_results_['mean_test_score'])
+
+                save_results(gs.best_estimator_, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
+                             "B_" + str(i) + str(j) + str(k), r"$B_{ij}$")
 
     print("Done!", flush=True)
 
@@ -133,13 +172,12 @@ def sr_rom_operon(train_data, val_data, train_val_data, test_data, symbols, outp
 if __name__ == "__main__":
     # load and process data
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 
-    train_data, val_data, train_val_data, test_data = split_data(
-        Re, 1000*A_conv, 1000*B_conv, tau_conv, a_FOM, test_size=0.6)
+    _, _, train_val_data, test_data = split_data(
+        Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.4)
 
-    symbols = 'add,sub,mul,sin,cos,sqrt,square,pow,acos,asin,atan,constant,variable'
+    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable'
 
     output_path = sys.argv[1]
-    sr_rom_operon(train_data, val_data, train_val_data,
-                  test_data, symbols, output_path)
+    sr_rom_operon(train_val_data, test_data, symbols, output_path)

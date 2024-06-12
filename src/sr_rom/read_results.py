@@ -2,6 +2,7 @@ import numpy as np
 import os
 from sympy import simplify, trigsimp, MatrixSymbol
 from sympy.parsing.sympy_parser import parse_expr
+import matplotlib.pyplot as plt
 
 
 def compute_statistics(r, path, models, scores, simplify_models=False):
@@ -30,6 +31,15 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     std_test_r_2 = np.std(test_r_2)
     print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
     print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
+
+    bins = np.linspace(0.5, 1, 100)
+
+    plt.hist(train_r_2, bins, alpha=0.5, label=r'Training $R^2$')
+    plt.hist(test_r_2, bins, alpha=0.5, label=r'Test $R^2$')
+    plt.legend(loc='upper right')
+    plt.show()
+
+    return 0
 
     if simplify_models:
         open('simplified_models.txt', 'w').close()
@@ -71,11 +81,11 @@ if __name__ == "__main__":
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
-    path = os.path.join(dir_path, "results_w_3_n_2/")
+    path = os.path.join(dir_path, "results_20/results_w_5_n_2/")
     models = os.path.join(path, "models.txt")
     scores = os.path.join(path, "scores.txt")
-    # tau = compute_statistics(5, path, models, scores)
-    tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
-    print("Simplifying...")
-    print(trigsimp(tau[0, 0]))
-    print("Done!")
+    tau = compute_statistics(5, path, models, scores)
+    # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
+    # print("Simplifying...")
+    # print(trigsimp(tau[0, 0]))
+    # print("Done!")

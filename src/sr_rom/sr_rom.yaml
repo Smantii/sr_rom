@@ -1,6 +1,6 @@
 # template for sr_rom parameters file
 gp:
-  NINDIVIDUALS: 100
+  NINDIVIDUALS: 500
   NGEN: 10
   multi_island:
     num_islands: 1
