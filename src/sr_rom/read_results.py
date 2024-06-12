@@ -32,11 +32,27 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
     print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
 
-    bins = np.linspace(0.5, 1, 100)
+    bins = np.linspace(-1, 1, 100)
 
     plt.hist(train_r_2, bins, alpha=0.5, label=r'Training $R^2$')
     plt.hist(test_r_2, bins, alpha=0.5, label=r'Test $R^2$')
     plt.legend(loc='upper right')
+    plt.show()
+
+    plt.clf()
+    plt.plot(train_r_2[:25], label=r'Training $R^2$')
+    plt.plot(test_r_2[:25], label=r'Test $R^2$')
+    plt.xlabel("Component number for A")
+    plt.ylabel(r"$R^2$")
+    plt.legend(loc='lower left')
+    plt.show()
+
+    plt.clf()
+    plt.plot(train_r_2[25:], label=r'Training $R^2$')
+    plt.plot(test_r_2[25:], label=r'Test $R^2$')
+    plt.xlabel("Component number for B")
+    plt.ylabel(r"$R^2$")
+    plt.legend(loc='lower left')
     plt.show()
 
     return 0
@@ -81,7 +97,7 @@ if __name__ == "__main__":
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
-    path = os.path.join(dir_path, "results_20/results_w_5_n_2/")
+    path = os.path.join(dir_path, "results_new/")
     models = os.path.join(path, "models.txt")
     scores = os.path.join(path, "scores.txt")
     tau = compute_statistics(5, path, models, scores)
