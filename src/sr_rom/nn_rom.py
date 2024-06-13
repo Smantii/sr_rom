@@ -152,7 +152,7 @@ def nn_rom(train_val_data, test_data, output_path):
             model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
                                        optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
 
-            gs = GridSearchCV(model, params, cv=5, verbose=3,
+            gs = GridSearchCV(model, params, cv=5, verbose=0,
                               scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
             tic = time.time()
             gs.fit(train_Re_norm, train_comp_norm)
@@ -188,13 +188,15 @@ def nn_rom(train_val_data, test_data, output_path):
                 model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
                                            optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
 
-                gs = GridSearchCV(model, params, cv=5, verbose=3,
+                gs = GridSearchCV(model, params, cv=5, verbose=0,
                                   scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
+                tic = time.time()
                 gs.fit(train_Re_norm, train_comp_norm)
+                toc = time.time()
 
                 save_results(gs, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                              mean_std_train_Re, mean_std_train_comp,
-                             "B_" + str(i) + str(j) + str(k), r"$B_{ijk}$", output_path)
+                             "B_" + str(i) + str(j) + str(k), r"$B_{ijk}$", output_path, toc-tic)
 
     print("Done!", flush=True)
 
