@@ -8,6 +8,7 @@ from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import time
 
 
 class CustomDataset(Dataset):
@@ -51,7 +52,7 @@ class NeuralNetwork(nn.Module):
 
 
 def save_results(reg, X_train_val, y_train_val, X_test, y_test,
-                 mean_std_train_Re, mean_std_train_comp, prb_name, ylabel, output_path):
+                 mean_std_train_Re, mean_std_train_comp, prb_name, ylabel, output_path, learning_time):
 
     train_val_neg_mse = reg.score(X_train_val, y_train_val)
     test_neg_mse = reg.score(X_test, y_test)
@@ -112,7 +113,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
     plt.savefig(output_path + prb_name + "_cont", dpi=300)
-    print(f"{prb_name} learned!", flush=True)
+    print(f"{prb_name} learned in {learning_time}!", flush=True)
 
     plt.clf()
 
@@ -121,7 +122,7 @@ def nn_rom(train_val_data, test_data, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
-    max_epochs = 10
+    max_epochs = 1000
 
     params = {
         'lr': [1e-4, 1e-3, 1e-2],
@@ -153,11 +154,13 @@ def nn_rom(train_val_data, test_data, output_path):
 
             gs = GridSearchCV(model, params, cv=5, verbose=3,
                               scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
+            tic = time.time()
             gs.fit(train_Re_norm, train_comp_norm)
+            toc = time.time()
 
             save_results(gs, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                          mean_std_train_Re, mean_std_train_comp,
-                         "A_" + str(i) + str(j), r"$A_{ij}$", output_path)
+                         "A_" + str(i) + str(j), r"$A_{ij}$", output_path, toc-tic)
 
     # training procedure for B
     print("Started training procedure for B", flush=True)
