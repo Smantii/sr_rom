@@ -1,10 +1,13 @@
 import os
 from sr_rom.data.data import process_data, split_data, smooth_data
-from torch.utils.data import Dataset, DataLoader
-from torch import tensor, nn
+from torch.utils.data import Dataset
+from torch import nn
 import torch
 from skorch import NeuralNetRegressor
 from sklearn.model_selection import GridSearchCV
+import matplotlib.pyplot as plt
+import numpy as np
+import sys
 
 
 class CustomDataset(Dataset):
@@ -47,6 +50,73 @@ class NeuralNetwork(nn.Module):
         return logits
 
 
+def save_results(reg, X_train_val, y_train_val, X_test, y_test,
+                 mean_std_train_Re, mean_std_train_comp, prb_name, ylabel):
+
+    train_val_neg_mse = reg.score(X_train_val, y_train_val)
+    test_neg_mse = reg.score(X_test, y_test)
+    # compute r2
+    train_val_score = 1 + train_val_neg_mse / \
+        torch.mean((y_train_val - torch.mean(y_train_val))**2)
+    test_score = 1 + test_neg_mse / \
+        torch.mean((y_test - torch.mean(y_test))**2)
+
+    # reconstruct the full dataset (concatenate and sort to account for order)
+    Re_data_norm = torch.sort(torch.concatenate((X_train_val, X_test)),
+                              axis=0)[0].view(-1, 1).detach().numpy()
+    prediction_norm = reg.predict(Re_data_norm)
+
+    # revert data scaling
+    Re_data = mean_std_train_Re[1]*Re_data_norm + mean_std_train_Re[0]
+    X_train_val = mean_std_train_Re[1]*X_train_val + mean_std_train_Re[0]
+    X_test = mean_std_train_Re[1]*X_test + mean_std_train_Re[0]
+    prediction = mean_std_train_comp[1]*prediction_norm + mean_std_train_comp[0]
+    y_train_val = mean_std_train_comp[1]*y_train_val + mean_std_train_comp[0]
+    y_test = mean_std_train_comp[1]*y_test + mean_std_train_comp[0]
+
+    with open("scores.txt", "a") as text_file:
+        text_file.write(prb_name + " " + str(train_val_score.item()) +
+                        " " + str(test_score.item()) + "\n")
+
+    np.save(prb_name + "_pred", prediction)
+
+    plt.scatter(X_train_val, y_train_val,
+                c="#b2df8a", marker=".", label="Training data")
+    plt.scatter(X_test, y_test,
+                c="#b2df8a", marker="*", label="Test data")
+    plt.scatter(Re_data, prediction, c="#1f78b4", marker='x',
+                label="Best sol", linewidths=0.5)
+    plt.xlabel(r"$Re$")
+    plt.ylabel(ylabel)
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
+               ncol=3, fancybox=True, shadow=True)
+    plt.savefig(prb_name, dpi=300)
+
+    plt.clf()
+
+    Re_full_norm = np.linspace(Re_data_norm[0], Re_data_norm[-1], 1001).reshape(-1, 1)
+    prediction_norm = reg.predict(Re_full_norm)
+
+    # revert data scaling
+    Re_full = mean_std_train_Re[1]*Re_full_norm + mean_std_train_Re[0]
+    prediction = mean_std_train_comp[1]*prediction_norm + mean_std_train_comp[0]
+
+    plt.scatter(X_train_val, y_train_val,
+                c="#b2df8a", marker=".", label="Training data")
+    plt.scatter(X_test, y_test,
+                c="#b2df8a", marker="*", label="Test data")
+    plt.plot(Re_full, prediction, c="#1f78b4",
+             label="Best sol", linewidth=0.5)
+    plt.xlabel(r"$Re$")
+    plt.ylabel(ylabel)
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
+               ncol=3, fancybox=True, shadow=True)
+    plt.savefig(prb_name + "_cont", dpi=300)
+    print(f"{prb_name} learned!", flush=True)
+
+    plt.clf()
+
+
 def nn_rom(train_val_data, test_data, output_path):
     os.chdir(output_path)
 
@@ -57,7 +127,7 @@ def nn_rom(train_val_data, test_data, output_path):
 
     params = {
         'lr': [1e-4, 1e-3, 1e-2],
-        'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
+        'optimizer__weight_decay': [1e-5, 1e-4],
     }
 
     print("Started training procedure for A", flush=True)
@@ -72,27 +142,24 @@ def nn_rom(train_val_data, test_data, output_path):
                 test_data.y['A'][:, i, j]).view(-1, 1).to(torch.float32)
 
             # Standardization
-            train_Re_norm = (train_Re - torch.mean(train_Re))/torch.std(train_Re)
-            train_comp_norm = (train_comp - torch.mean(train_comp)) / \
-                torch.std(train_comp)
-            test_Re_norm = (test_Re - torch.mean(train_Re))/torch.std(train_Re)
-            test_comp_norm = (test_comp - torch.mean(train_comp))/torch.std(train_comp)
-
-            # wrap datasets
-            training = CustomDataset(train_Re_norm, train_comp_norm)
-            test = CustomDataset(test_Re_norm, test_comp_norm)
-
-            train_dataloader = DataLoader(
-                training, batch_size=len(train_Re_norm), shuffle=False)
-            test_dataloader = DataLoader(
-                test, batch_size=len(test_Re_norm), shuffle=False)
+            mean_std_train_Re = [torch.mean(train_Re), torch.std(train_Re)]
+            mean_std_train_comp = [torch.mean(train_comp), torch.std(train_comp)]
+            train_Re_norm = (train_Re - mean_std_train_Re[0])/mean_std_train_Re[1]
+            train_comp_norm = (train_comp - mean_std_train_comp[0]) / \
+                mean_std_train_comp[1]
+            test_Re_norm = (test_Re - mean_std_train_Re[0])/mean_std_train_Re[1]
+            test_comp_norm = (test_comp - mean_std_train_comp[0])/mean_std_train_comp[1]
 
             model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
-                                       optimizer=torch.optim.Adam, max_epochs=1000, train_split=None)
+                                       optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
 
             gs = GridSearchCV(model, params, cv=5, verbose=3,
-                              scoring="neg_mean_squared_error", refit=True, n_jobs=6)
+                              scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
             gs.fit(train_Re_norm, train_comp_norm)
+
+            save_results(gs, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
+                         mean_std_train_Re, mean_std_train_comp,
+                         "A_" + str(i) + str(j), r"$A_{ij}$")
 
 
 if __name__ == "__main__":
@@ -102,3 +169,6 @@ if __name__ == "__main__":
 
     _, _, train_val_data, test_data = split_data(
         Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.4)
+
+    output_path = sys.argv[1]
+    nn_rom(train_val_data, test_data, output_path)

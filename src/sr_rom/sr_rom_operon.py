@@ -23,6 +23,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,  prb_name, ylabe
 
     str_model = reg.get_model_string(reg.model_, precision=5)
 
+    # reconstruct the full dataset (concatenate and sort to account for order)
     Re_data = np.sort(np.concatenate((X_train_val, X_test)),
                       axis=0).reshape(-1, 1)
     prediction = reg.predict(Re_data)
