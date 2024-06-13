@@ -51,7 +51,7 @@ class NeuralNetwork(nn.Module):
 
 
 def save_results(reg, X_train_val, y_train_val, X_test, y_test,
-                 mean_std_train_Re, mean_std_train_comp, prb_name, ylabel):
+                 mean_std_train_Re, mean_std_train_comp, prb_name, ylabel, output_path):
 
     train_val_neg_mse = reg.score(X_train_val, y_train_val)
     test_neg_mse = reg.score(X_test, y_test)
@@ -74,11 +74,11 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     y_train_val = mean_std_train_comp[1]*y_train_val + mean_std_train_comp[0]
     y_test = mean_std_train_comp[1]*y_test + mean_std_train_comp[0]
 
-    with open("scores.txt", "a") as text_file:
+    with open(output_path + "scores.txt", "a") as text_file:
         text_file.write(prb_name + " " + str(train_val_score.item()) +
                         " " + str(test_score.item()) + "\n")
 
-    np.save(prb_name + "_pred", prediction)
+    np.save(output_path + prb_name + "_pred", prediction)
 
     plt.scatter(X_train_val, y_train_val,
                 c="#b2df8a", marker=".", label="Training data")
@@ -90,7 +90,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(prb_name, dpi=300)
+    plt.savefig(output_path + prb_name, dpi=300)
 
     plt.clf()
 
@@ -111,19 +111,17 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(prb_name + "_cont", dpi=300)
+    plt.savefig(output_path + prb_name + "_cont", dpi=300)
     print(f"{prb_name} learned!", flush=True)
 
     plt.clf()
 
 
 def nn_rom(train_val_data, test_data, output_path):
-    os.chdir(output_path)
-
-    with open("scores.txt", "a") as text_file:
+    with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
-    max_epochs = 1000
+    max_epochs = 10
 
     params = {
         'lr': [1e-4, 1e-3, 1e-2],
@@ -159,16 +157,57 @@ def nn_rom(train_val_data, test_data, output_path):
 
             save_results(gs, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                          mean_std_train_Re, mean_std_train_comp,
-                         "A_" + str(i) + str(j), r"$A_{ij}$")
+                         "A_" + str(i) + str(j), r"$A_{ij}$", output_path)
+
+    # training procedure for B
+    print("Started training procedure for B", flush=True)
+    for i in range(5):
+        for j in range(5):
+            for k in range(5):
+                train_Re = torch.from_numpy(
+                    train_val_data.X).view(-1, 1).to(torch.float32)
+                train_comp = torch.from_numpy(
+                    train_val_data.y['B'][:, i, j, k]).view(-1, 1).to(torch.float32)
+                test_Re = torch.from_numpy(test_data.X).view(-1, 1).to(torch.float32)
+                test_comp = torch.from_numpy(
+                    test_data.y['B'][:, i, j, k]).view(-1, 1).to(torch.float32)
+
+                # Standardization
+                mean_std_train_Re = [torch.mean(train_Re), torch.std(train_Re)]
+                mean_std_train_comp = [torch.mean(train_comp), torch.std(train_comp)]
+                train_Re_norm = (train_Re - mean_std_train_Re[0])/mean_std_train_Re[1]
+                train_comp_norm = (train_comp - mean_std_train_comp[0]) / \
+                    mean_std_train_comp[1]
+                test_Re_norm = (test_Re - mean_std_train_Re[0])/mean_std_train_Re[1]
+                test_comp_norm = (
+                    test_comp - mean_std_train_comp[0])/mean_std_train_comp[1]
+
+                model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
+                                           optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
+
+                gs = GridSearchCV(model, params, cv=5, verbose=3,
+                                  scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
+                gs.fit(train_Re_norm, train_comp_norm)
+
+                save_results(gs, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
+                             mean_std_train_Re, mean_std_train_comp,
+                             "B_" + str(i) + str(j) + str(k), r"$B_{ijk}$", output_path)
+
+    print("Done!", flush=True)
 
 
 if __name__ == "__main__":
-    # load and process data
-    Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
-
-    _, _, train_val_data, test_data = split_data(
-        Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.4)
-
     output_path = sys.argv[1]
-    nn_rom(train_val_data, test_data, output_path)
+    windows = [3, 5, 7]
+    for w in windows:
+        new_folder = "results_w_" + str(w) + "_n_2"
+        os.mkdir(output_path + new_folder)
+        # load and process data
+        Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
+
+        _, _, train_val_data, test_data = split_data(
+            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.4)
+
+        nn_rom(train_val_data, test_data, output_path + new_folder + "/")
+        print(f"---Results for window size {w} completed!---", flush=True)

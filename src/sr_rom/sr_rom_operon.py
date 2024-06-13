@@ -123,7 +123,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
     print("Done!", flush=True)
 
     # training procedure for B
-    print("Started training procedure for B")
+    print("Started training procedure for B", flush=True)
     for i in range(5):
         for j in range(5):
             for k in range(5):
