@@ -213,7 +213,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.4)
+            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
 
         nn_rom(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
