@@ -15,8 +15,8 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     with open(scores) as scores_file:
         scores_file = scores_file.readlines()
 
-    with open(models) as models_file:
-        models_file = models_file.readlines()
+    # with open(models) as models_file:
+    #    models_file = models_file.readlines()
 
     # load r^2 errors
     for i, line in enumerate(scores_file[1:]):
@@ -29,33 +29,35 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     std_train_r_2 = np.std(train_r_2)
     mean_test_r_2 = np.mean(test_r_2)
     std_test_r_2 = np.std(test_r_2)
-    print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
-    print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
+    # print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
+    # print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
 
     bins = np.linspace(-1, 1, 100)
 
+    '''
     plt.hist(train_r_2, bins, alpha=0.5, label=r'Training $R^2$')
     plt.hist(test_r_2, bins, alpha=0.5, label=r'Test $R^2$')
     plt.legend(loc='upper right')
-    plt.show()
+    plt.savefig("hist.png", dpi=300)
 
     plt.clf()
-    plt.plot(train_r_2[:25], label=r'Training $R^2$')
-    plt.plot(test_r_2[:25], label=r'Test $R^2$')
+    plt.bar(np.arange(25), train_r_2[:25], label=r'Training $R^2$')
+    plt.bar(np.arange(25), test_r_2[:25], label=r'Test $R^2$')
     plt.xlabel("Component number for A")
     plt.ylabel(r"$R^2$")
     plt.legend(loc='lower left')
-    plt.show()
+    plt.savefig("A_bar_plot.png", dpi=300)
 
     plt.clf()
-    plt.plot(train_r_2[25:], label=r'Training $R^2$')
-    plt.plot(test_r_2[25:], label=r'Test $R^2$')
+    plt.bar(np.arange(125), train_r_2[25:], label=r'Training $R^2$')
+    plt.bar(np.arange(125), test_r_2[25:], label=r'Test $R^2$')
     plt.xlabel("Component number for B")
     plt.ylabel(r"$R^2$")
     plt.legend(loc='lower left')
-    plt.show()
+    plt.savefig("B_bar_plot.png", dpi=300)
+    '''
 
-    return 0
+    return f"$ {round(mean_test_r_2,3)} \pm {round(std_test_r_2,3)}$"
 
     if simplify_models:
         open('simplified_models.txt', 'w').close()
@@ -96,11 +98,22 @@ if __name__ == "__main__":
     # load and process data
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
+    r_2_scores = np.zeros((3, 5), dtype=object)
 
-    path = os.path.join(dir_path, "results_new/")
-    models = os.path.join(path, "models.txt")
-    scores = os.path.join(path, "scores.txt")
-    tau = compute_statistics(5, path, models, scores)
+    path = os.path.join(dir_path, "nn_results/")
+    results_dir = np.sort([name for name in os.listdir(path)])
+    # iterate over directory with different test size
+    for j, res_test in enumerate(results_dir):
+        res_path = os.path.join(path, res_test)
+        w_dir = np.sort([name for name in os.listdir(
+            res_path) if name.replace(".out", "") == name])
+        #    # iterate over directory with different window size
+        for i, res_w in enumerate(w_dir):
+            res_w_path = os.path.join(res_path, res_w)
+            models = os.path.join(res_w_path, "models.txt")
+            scores = os.path.join(res_w_path, "scores.txt")
+            r_2_scores[i, j] = compute_statistics(5, res_w_path, models, scores)
+    print(r_2_scores)
     # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
     # print("Simplifying...")
     # print(trigsimp(tau[0, 0]))

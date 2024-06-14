@@ -91,7 +91,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(output_path + prb_name, dpi=300)
+    plt.savefig(output_path + prb_name, dpi=300, bbox_inches='tight')
 
     plt.clf()
 
@@ -112,8 +112,8 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(output_path + prb_name + "_cont", dpi=300)
-    print(f"{prb_name} learned in {learning_time}!", flush=True)
+    plt.savefig(output_path + prb_name + "_cont", dpi=300, bbox_inches='tight')
+    print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
     plt.clf()
 
@@ -205,6 +205,7 @@ if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
     for w in windows:
+        print(f"---Collecting results for window size {w}...!---", flush=True)
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # load and process data

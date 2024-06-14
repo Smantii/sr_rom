@@ -33,14 +33,14 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     y_train_val = mean_std_train_comp[1]*y_train_val + mean_std_train_comp[0]
     y_test = mean_std_train_comp[1]*y_test + mean_std_train_comp[0]
 
-    with open("models.txt", "a") as text_file:
+    with open(output_path + "models.txt", "a") as text_file:
         text_file.write(prb_name + " = " + str_model + "\n")
 
-    with open("scores.txt", "a") as text_file:
+    with open(output_path + "scores.txt", "a") as text_file:
         text_file.write(prb_name + " " + str(train_val_score) +
                         " " + str(test_score) + "\n")
 
-    np.save(prb_name + "_pred", prediction)
+    np.save(output_path + prb_name + "_pred", prediction)
 
     plt.scatter(X_train_val, y_train_val,
                 c="#b2df8a", marker=".", label="Training data")
@@ -52,7 +52,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(prb_name, dpi=300)
+    plt.savefig(output_path + prb_name, dpi=300, bbox_inches='tight')
 
     plt.clf()
 
@@ -73,16 +73,14 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.ylabel(ylabel)
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
                ncol=3, fancybox=True, shadow=True)
-    plt.savefig(prb_name + "_cont", dpi=300)
-    print(f"{prb_name} learned!", flush=True)
+    plt.savefig(output_path + prb_name + "_cont", dpi=300, bbox_inches='tight')
+    print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
     plt.clf()
 
 
 def sr_rom_operon(train_val_data, test_data, symbols, output_path):
-    os.chdir(output_path)
-
-    with open("scores.txt", "a") as text_file:
+    with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
     print("Started training procedure for A", flush=True)
@@ -116,7 +114,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                 'tournament_size': [2, 3],
             }
 
-            gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=6)
+            gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=-1)
             tic = time.time()
             gs.fit(train_Re_norm, train_comp_norm)
             toc = time.time()
@@ -147,11 +145,9 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                 reg = SymbolicRegressor(
                     allowed_symbols=symbols,
                     optimizer_iterations=10,
-                    # max_length=40,
                     n_threads=16,
                     epsilon=0,
                     max_evaluations=int(1e6),
-                    # tournament_size=3
                 )
 
                 params = {
@@ -159,7 +155,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                     'tournament_size': [2, 3],
                 }
 
-                gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=6)
+                gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=-1)
                 tic = time.time()
                 gs.fit(train_Re_norm, train_comp_norm)
                 toc = time.time()
@@ -179,6 +175,7 @@ if __name__ == "__main__":
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
 
     for w in windows:
+        print(f"---Collecting results for window size {w}...!---", flush=True)
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # process data
@@ -187,5 +184,6 @@ if __name__ == "__main__":
         _, _, train_val_data, test_data = split_data(
             Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
 
-        sr_rom_operon(train_val_data, test_data, symbols, output_path)
+        sr_rom_operon(train_val_data, test_data, symbols,
+                      output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
