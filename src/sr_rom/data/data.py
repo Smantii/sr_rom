@@ -69,11 +69,14 @@ def split_data(Re, A, B, tau, a_FOM, test_size=0.2):
     a_FOM_val = a_FOM[idx_val]
     a_FOM_test = a_FOM[idx_test]
 
-    data_train = {'A': A_train, 'B': B_train, 'tau': tau_train, 'a_FOM': a_FOM_train}
+    data_train = {'A': A_train, 'B': B_train, 'tau': tau_train,
+                  'a_FOM': a_FOM_train, 'idx': idx_train}
     data_train_val = {'A': A_train_val, 'B': B_train_val,
-                      'tau': tau_train_val, 'a_FOM': a_FOM_train_val}
-    data_val = {'A': A_val, 'B': B_val, 'tau': tau_val, 'a_FOM': a_FOM_val}
-    data_test = {'A': A_test, 'B': B_test, 'tau': tau_test, 'a_FOM': a_FOM_test}
+                      'tau': tau_train_val, 'a_FOM': a_FOM_train_val, 'idx': idx_train_val}
+    data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
+                'a_FOM': a_FOM_val, 'idx': idx_val}
+    data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
+                 'a_FOM': a_FOM_test, 'idx': idx_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
     train_val_data = Dataset("Re_data", Re_train_val, data_train_val)

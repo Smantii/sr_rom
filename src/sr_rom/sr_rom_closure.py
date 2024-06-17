@@ -11,7 +11,7 @@ import time
 import sys
 import yaml
 from dctkit import config
-from jax import jit, grad, Array
+from jax import jit, grad
 import pygmo as pg
 import numpy as np
 import matplotlib.pyplot as plt
@@ -70,8 +70,13 @@ def compute_MSE_sol_comp(individual: Callable, Re_data: Dataset) -> Tuple[float,
     # time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
     # total_error = jnp.mean(time_norm)
     # total_error = jnp.mean((tau_i - tau_computed)**2)
-    total_error = jnp.sum((tau_i - tau_computed)**2)
-    r_2 = 1 - total_error/jnp.sum((tau_i - jnp.mean(tau_i))**2)
+    total_error_tau = jnp.sum((tau_i - tau_computed)**2)
+    total_error_A = jnp.sum((Re_data.y['A'][:, 0, i] - A_computed[:, i])**2)
+    r_2_tau = 1 - total_error_tau/jnp.sum((tau_i - jnp.mean(tau_i))**2)
+    r_2_A = 1 - total_error_A / \
+        jnp.sum((Re_data.y['A'][:, 0, i] - jnp.mean(Re_data.y['A'][:, 0, i]))**2)
+
+    r_2 = 0.5*(r_2_tau + r_2_A)
 
     return -r_2, tau_computed
 
@@ -260,18 +265,26 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
 
     print("Best constants = ", gpsr.best.consts)
 
-    # PLOTS
-    tau_train_val = gpsr.predict(train_val_data)
-    tau_test = gpsr.predict(test_data)
+    # ----- PLOTS -----
+    os.chdir(output_path)
+    # extract relevant quantities and init matrices
+    num_re = len(train_val_data.X) + len(test_data.X)
+    num_t = 2001
+    idx_train_val = train_val_data.y['idx']
+    idx_test = test_data.y['idx']
+    tau = np.zeros((num_re, num_t))
+    tau_computed = np.zeros_like(tau)
+    re = np.zeros(num_re)
 
-    # from sklearn.metrics import r2_score
-    # print(r2_score(test_data.y['tau'][:, :, 0], tau_test))
+    # fill with right values at right indices
+    tau[idx_train_val] = train_val_data.y['tau'][:, :, 0]
+    tau[idx_test] = test_data.y['tau'][:, :, 0]
+    tau_computed[idx_train_val] = gpsr.predict(train_val_data)
+    tau_computed[idx_test] = gpsr.predict(test_data)
+    re[idx_train_val] = train_val_data.X
+    re[idx_test] = test_data.X
 
-    tau = np.vstack((train_val_data.y['tau'], test_data.y['tau']))[:, :, 0]
-    tau_computed = np.vstack((tau_train_val, tau_test))
-
-    re = np.concatenate((train_val_data.X, test_data.X))
-    t = np.arange(2001)
+    t = np.arange(num_t)
 
     re_mesh, t_mesh = np.meshgrid(re, t)
 
@@ -291,7 +304,6 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     ax[1].set_title(r"Approximated Closure term")
     plt.colorbar(surf, shrink=0.5)
     plt.colorbar(surf_comp, shrink=0.5)
-    os.chdir(output_path)
 
     plt.savefig("data_vs_sol.png", dpi=300)
 
