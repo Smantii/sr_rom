@@ -31,17 +31,19 @@ class NeuralNetwork(nn.Module):
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(1, 64),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(64, 128),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(128, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
+            # nn.LeakyReLU(),
+            # nn.Linear(256, 512),
+            # nn.LeakyReLU(),
+            # nn.Linear(512, 256),
+            # nn.LeakyReLU(),
             nn.Linear(256, 128),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(128, 64),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(64, 1),
         )
 
@@ -213,7 +215,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
+            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.7)
 
         nn_rom(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)

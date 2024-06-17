@@ -51,7 +51,7 @@ def compute_MSE_sol(individual: Callable, indlen: int,
 
 def compute_MSE_sol_comp(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
 
-    i = 0
+    i = 1
 
     Re_array = Re_data.X
     tau_i = Re_data.y['tau'][:, :, i]
@@ -59,7 +59,7 @@ def compute_MSE_sol_comp(individual: Callable, Re_data: Dataset) -> Tuple[float,
     a_FOM = Re_data.y['a_FOM']
 
     # A_computed = jnp.array(list(map(individual, Re_array)))
-    A_computed = jnp.array(Re_data.y['A'][:, 0, :].copy())
+    A_computed = jnp.array(Re_data.y['A'][:, 1, :].copy())
     A_computed = A_computed.at[:, i].set(individual(Re_array))
 
     A_a_FOM = jnp.einsum("ij,ikj->ik", A_computed, a_FOM)
@@ -127,7 +127,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
         algo = pg.algorithm(pg.nlopt(solver="lbfgs"))
         algo.extract(pg.nlopt).ftol_abs = 1e-4
         algo.extract(pg.nlopt).ftol_rel = 1e-4
-        algo.extract(pg.nlopt).maxeval = 1000
+        algo.extract(pg.nlopt).maxeval = 10
         pop = pg.population(prb, size=0)
         pop.push_back(x0)
         pop = algo.evolve(pop)

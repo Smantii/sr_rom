@@ -34,18 +34,18 @@ def generate_toy_data(r):
 
 def split_data(Re, A, B, tau, a_FOM, test_size=0.2):
     num_data = len(Re)
-    num_test = round(test_size*num_data)
-    half_num_test = int(num_test/2)
-    center = int((num_data - 1)/2)
+    # num_test = round(test_size*num_data)
+    # half_num_test = int(num_test/2)
+    # center = int((num_data - 1)/2)
 
-    idx_test = np.arange(center - half_num_test, center + half_num_test)
-    idx_train_val = np.concatenate(
-        (np.arange(center - half_num_test), np.arange(center + half_num_test, num_data)))
-    Re_train_val = Re[idx_train_val]
-    Re_test = Re[idx_test]
+    # idx_test = np.arange(center - half_num_test, center + half_num_test)
+    # idx_train_val = np.concatenate(
+    #    (np.arange(center - half_num_test), np.arange(center + half_num_test, num_data)))
+    # Re_train_val = Re[idx_train_val]
+    # Re_test = Re[idx_test]
 
-    # Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
-    #    Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=True)
+    Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
+        Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=True)
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
         Re_train_val, idx_train_val, test_size=2/8, random_state=42, shuffle=True)
 
