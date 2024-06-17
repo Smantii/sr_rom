@@ -3,9 +3,10 @@ import os
 from sympy import simplify, trigsimp, MatrixSymbol
 from sympy.parsing.sympy_parser import parse_expr
 import matplotlib.pyplot as plt
+from sr_rom.data.data import process_data, split_data
 
 
-def compute_statistics(r, path, models, scores, simplify_models=False):
+def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_path, simplify_models=False):
     os.chdir(path)
     train_r_2 = np.zeros(r**2 + r**3, dtype=np.float64)
     test_r_2 = np.zeros(r**2 + r**3, dtype=np.float64)
@@ -32,9 +33,21 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     # print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
     # print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
 
-    bins = np.linspace(-1, 1, 100)
+    err_l2 = np.loadtxt(err_l2_path, delimiter=",", skiprows=1)[idx_test, 1]
+    err_h10 = np.loadtxt(err_h10_path, delimiter=",", skiprows=1)[idx_test, 1]
+
+    mean_test_l2 = np.mean(err_l2)
+    std_test_l2 = np.std(err_l2)
+    mean_test_h10 = np.mean(err_h10)
+    std_test_h10 = np.std(err_h10)
+
+    results = [f"$ {round(mean_test_r_2,3)} \pm {round(std_test_r_2,3)}$",
+               f"$ {round(mean_test_l2,3)} \pm {round(std_test_l2,3)}$",
+               f"$ {round(mean_test_h10,3)} \pm {round(std_test_h10,3)}$"]
 
     '''
+    bins = np.linspace(-1, 1, 100)
+
     plt.hist(train_r_2, bins, alpha=0.5, label=r'Training $R^2$')
     plt.hist(test_r_2, bins, alpha=0.5, label=r'Test $R^2$')
     plt.legend(loc='upper right')
@@ -57,7 +70,7 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
     plt.savefig("B_bar_plot.png", dpi=300)
     '''
 
-    return f"$ {round(mean_test_r_2,3)} \pm {round(std_test_r_2,3)}$"
+    return results
 
     if simplify_models:
         open('simplified_models.txt', 'w').close()
@@ -96,9 +109,12 @@ def compute_statistics(r, path, models, scores, simplify_models=False):
 
 if __name__ == "__main__":
     # load and process data
+    Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    r_2_scores = np.zeros((3, 5), dtype=object)
+    r2_scores = np.zeros((3, 5), dtype=object)
+    l2_scores = np.zeros((3, 5), dtype=object)
+    h10_scores = np.zeros((3, 5), dtype=object)
 
     path = os.path.join(dir_path, "nn_results/")
     results_dir = np.sort([name for name in os.listdir(path)])
@@ -109,11 +125,30 @@ if __name__ == "__main__":
             res_path) if name.replace(".out", "") == name])
         #    # iterate over directory with different window size
         for i, res_w in enumerate(w_dir):
+            _, _, _, test_data = split_data(
+                Re, A, B, tau, a_FOM, test_size=0.2 + 0.1*j)
+
+            idx_test = test_data.y["idx"]
+
             res_w_path = os.path.join(res_path, res_w)
             models = os.path.join(res_w_path, "models.txt")
             scores = os.path.join(res_w_path, "scores.txt")
-            r_2_scores[i, j] = compute_statistics(5, res_w_path, models, scores)
-    print(r_2_scores)
+            err_l2_path = os.path.join(
+                res_w_path, "vmsrom_nn_l2_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+            err_h10_path = os.path.join(
+                res_w_path, "vmsrom_nn_h10_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+
+            results = compute_statistics(
+                5, res_w_path, models, scores, idx_test, err_l2_path, err_h10_path)
+
+            r2_scores[i, j] = results[0]
+            l2_scores[i, j] = results[1]
+            h10_scores[i, j] = results[2]
+    print(r2_scores)
+    print("--------------------")
+    print(l2_scores)
+    print("--------------------")
+    print(h10_scores)
     # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
     # print("Simplifying...")
     # print(trigsimp(tau[0, 0]))
