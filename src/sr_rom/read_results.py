@@ -33,8 +33,13 @@ def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_p
     # print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
     # print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
 
+    print(idx_test)
+    print(err_l2_path)
+
     err_l2 = np.loadtxt(err_l2_path, delimiter=",", skiprows=1)[idx_test, 1]
     err_h10 = np.loadtxt(err_h10_path, delimiter=",", skiprows=1)[idx_test, 1]
+
+    print(err_l2)
 
     mean_test_l2 = np.mean(err_l2)
     std_test_l2 = np.std(err_l2)
@@ -123,13 +128,11 @@ if __name__ == "__main__":
         res_path = os.path.join(path, res_test)
         w_dir = np.sort([name for name in os.listdir(
             res_path) if name.replace(".out", "") == name])
+        _, _, _, test_data = split_data(
+            Re, A, B, tau, a_FOM, test_size=0.2 + 0.1*j)
+        idx_test = test_data.y["idx"]
         #    # iterate over directory with different window size
         for i, res_w in enumerate(w_dir):
-            _, _, _, test_data = split_data(
-                Re, A, B, tau, a_FOM, test_size=0.2 + 0.1*j)
-
-            idx_test = test_data.y["idx"]
-
             res_w_path = os.path.join(res_path, res_w)
             models = os.path.join(res_w_path, "models.txt")
             scores = os.path.join(res_w_path, "scores.txt")
@@ -144,6 +147,7 @@ if __name__ == "__main__":
             r2_scores[i, j] = results[0]
             l2_scores[i, j] = results[1]
             h10_scores[i, j] = results[2]
+
     print(r2_scores)
     print("--------------------")
     print(l2_scores)

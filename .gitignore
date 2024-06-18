@@ -17,6 +17,15 @@ __pycache__/*
 *.txt
 *.pdf
 *.png
+*.sh
+*gu
+*au
+*bu
+*cu
+*nb
+*ns
+*u0
+*uk
 
 # Project files
 .ropeproject
