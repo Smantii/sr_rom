@@ -102,13 +102,14 @@ test_Re_norm = torch.from_numpy(test_Re_norm).to(torch.float32)
 test_comp_norm = torch.from_numpy(test_comp_norm.reshape(-1, 1)).to(torch.float32)
 
 model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                           optimizer=torch.optim.Adam, max_epochs=1,
+                           optimizer=torch.optim.Adam, max_epochs=500,
                            train_split=None, device="cuda")
 
 params = {
-    'lr': [1e-4, 1e-3],
+    'lr': [1e-4, 1e-3, 1e-2],
     'optimizer__weight_decay': [1e-5, 1e-4],
-    'module__hidden_units': [[64, 128, 256, 512, 256, 128, 64]]
+    'module__hidden_units': [[64, 128, 256, 512, 256, 128, 64],
+                             [128, 256, 512, 1024, 512, 256, 128]]
 }
 
 tic = time.time()
