@@ -11,39 +11,25 @@ import sys
 import time
 
 
-class CustomDataset(Dataset):
-    def __init__(self, Re, targets):
-        self.Re = Re
-        self.targets = targets
-
-    def __getitem__(self, idx):
-        Re_idx = self.Re[idx]
-        target_idx = self.targets[idx]
-        return Re_idx, target_idx
-
-    def __len__(self):
-        return len(self.targets)
-
-
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(1, 64),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(64, 128),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(128, 256),
-            # nn.LeakyReLU(),
-            # nn.Linear(256, 512),
-            # nn.LeakyReLU(),
-            # nn.Linear(512, 256),
-            # nn.LeakyReLU(),
+            nn.ReLU(),
+            nn.Linear(256, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
             nn.Linear(256, 128),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(128, 64),
-            nn.LeakyReLU(),
+            nn.ReLU(),
             nn.Linear(64, 1),
         )
 
@@ -215,7 +201,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.7)
+            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
 
         nn_rom(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)

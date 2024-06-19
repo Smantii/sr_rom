@@ -154,7 +154,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                     'tournament_size': [2, 3],
                 }
 
-                gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=-1)
+                gs = GridSearchCV(reg, params, cv=3, verbose=0, refit=True, n_jobs=-1)
                 tic = time.time()
                 gs.fit(train_Re_norm, train_comp_norm)
                 toc = time.time()
@@ -168,7 +168,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
 
 if __name__ == "__main__":
     output_path = sys.argv[1]
-    windows = [7]
+    windows = [3, 5, 7]
     symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable'
     # load data
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
