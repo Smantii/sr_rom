@@ -29,16 +29,10 @@ num_cpus = 2
 
 def compute_MSE_sol(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
 
-    i = 0
-
-    Re_array = Re_data.X
-    tau_i = Re_data.y['tau'][:, :, i]
-    a_FOM = Re_data.y['a_FOM']
-
-    tau_computed = individual(Re_array, a_FOM[:, :, 0], a_FOM[:, :, 1],
-                              a_FOM[:, :, 2], a_FOM[:, :, 3], a_FOM[:, :, 4])
-    total_error_tau = jnp.sum((tau_i - tau_computed)**2)
-    r_2 = 1 - total_error_tau/jnp.sum((tau_i - jnp.mean(tau_i))**2)
+    tau_computed = individual(Re_data.X[:, 0], Re_data.X[:, 1], Re_data.X[:, 2],
+                              Re_data.X[:, 3], Re_data.X[:, 4], Re_data.X[:, 5])
+    total_error_tau = jnp.sum((Re_data.y - tau_computed)**2)
+    r_2 = 1 - total_error_tau/jnp.sum((Re_data.y - jnp.mean(Re_data.y))**2)
 
     return -r_2, tau_computed
 
@@ -226,21 +220,27 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     # ----- PLOTS -----
     os.chdir(output_path)
     # extract relevant quantities and init matrices
-    num_re = len(train_val_data.X) + len(test_data.X)
+    num_re_train_val = train_val_data.X[:, 0]/2001
+    num_re_test = test_data.X[:, 0]/2001
+    num_re = num_re_train_val + num_re_test
     num_t = 2001
-    idx_train_val = train_val_data.y['idx']
-    idx_test = test_data.y['idx']
+    idx_train_val = np.arange(num_re_train_val)
+    idx_test = np.arange(num_re_test)
     tau = np.zeros((num_re, num_t))
     tau_computed = np.zeros_like(tau)
     re = np.zeros(num_re)
 
     # fill with right values at right indices
-    tau[idx_train_val] = train_val_data.y['tau'][:, :, 0]
-    tau[idx_test] = test_data.y['tau'][:, :, 0]
-    tau_computed[idx_train_val] = gpsr.predict(train_val_data)
-    tau_computed[idx_test] = gpsr.predict(test_data)
-    re[idx_train_val] = train_val_data.X
-    re[idx_test] = test_data.X
+    tau[idx_train_val] = train_val_data.y.reshape((num_re_train_val, 2001), order="F")
+    tau[idx_test] = test_data.y.reshape((num_re_test, 2001), order="F")
+    tau_computed[idx_train_val] = gpsr.predict(
+        train_val_data).reshape((num_re_train_val, 2001), order="F")
+    tau_computed[idx_test] = gpsr.predict(
+        test_data).reshape((num_re_test, 2001), order="F")
+    # to get reynolds without repetitions we should take the first n points of X[:,0], where
+    # n = number of different reynolds in the dataset
+    re[idx_train_val] = train_val_data.X[:len(idx_train_val), 0]
+    re[idx_test] = test_data.X[:len(idx_test), 0]
 
     t = np.arange(num_t)
 
@@ -277,10 +277,10 @@ if __name__ == "__main__":
     # load data
     # from sr_rom.data.data import generate_toy_data
     # k_array, A_B_list = generate_toy_data(5)
-    Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
+    Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
     train_data, val_data, train_val_data, test_data = split_data(
-        Re, A_conv, B_conv, tau_conv, a_FOM)
+        Re, A_conv, B_conv, tau_conv, a_FOM, X)
 
     if n_args >= 3:
         output_path = sys.argv[2]
