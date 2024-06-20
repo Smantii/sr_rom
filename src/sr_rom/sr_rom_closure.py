@@ -27,8 +27,7 @@ config()
 num_cpus = 2
 
 
-def compute_MSE_sol(individual: Callable, indlen: int,
-                    Re_data: Dataset) -> Tuple[float, List]:
+def compute_MSE_sol(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
 
     i = 0
 
@@ -36,47 +35,10 @@ def compute_MSE_sol(individual: Callable, indlen: int,
     tau_i = Re_data.y['tau'][:, :, i]
     a_FOM = Re_data.y['a_FOM']
 
-    tau_computed = jnp.array(
-        list(map(individual, Re_array, a_FOM[:, :, 0], a_FOM[:, :, 1], a_FOM[:, :, 2], a_FOM[:, :, 3], a_FOM[:, :, 4])))
-
-    # time_norm = jnp.sum((tau_i - jnp.mean(tau_i))**2, axis=1)
-    # time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
-    # total_error = jnp.mean(time_norm)
-    total_error = jnp.sum((tau_i - tau_computed)**2)
-    r_2 = 1 - total_error/jnp.sum((tau_i - jnp.mean(tau_i))**2)
-    # total_error = jnp.mean((tau_i - tau_computed)**2)
-
-    return -r_2, tau_computed
-
-
-def compute_MSE_sol_comp(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
-
-    i = 1
-
-    Re_array = Re_data.X
-    tau_i = Re_data.y['tau'][:, :, i]
-    B_i = Re_data.y['B'][:, i, :, :]
-    a_FOM = Re_data.y['a_FOM']
-
-    # A_computed = jnp.array(list(map(individual, Re_array)))
-    A_computed = jnp.array(Re_data.y['A'][:, 1, :].copy())
-    A_computed = A_computed.at[:, i].set(individual(Re_array))
-
-    A_a_FOM = jnp.einsum("ij,ikj->ik", A_computed, a_FOM)
-    a_FOM_T_B_a_FOM = jnp.einsum("lmj, ljk, lmk->lm", a_FOM, B_i, a_FOM)
-    tau_computed = A_a_FOM + a_FOM_T_B_a_FOM
-
-    # time_norm = jnp.sum((tau_i - jnp.mean(tau_i))**2, axis=1)
-    # time_norm = jnp.sum((tau_i - tau_computed)**2, axis=1)
-    # total_error = jnp.mean(time_norm)
-    # total_error = jnp.mean((tau_i - tau_computed)**2)
+    tau_computed = individual(Re_array, a_FOM[:, :, 0], a_FOM[:, :, 1],
+                              a_FOM[:, :, 2], a_FOM[:, :, 3], a_FOM[:, :, 4])
     total_error_tau = jnp.sum((tau_i - tau_computed)**2)
-    total_error_A = jnp.sum((Re_data.y['A'][:, 0, i] - A_computed[:, i])**2)
-    r_2_tau = 1 - total_error_tau/jnp.sum((tau_i - jnp.mean(tau_i))**2)
-    r_2_A = 1 - total_error_A / \
-        jnp.sum((Re_data.y['A'][:, 0, i] - jnp.mean(Re_data.y['A'][:, 0, i]))**2)
-
-    r_2 = 0.5*(r_2_tau + r_2_A)
+    r_2 = 1 - total_error_tau/jnp.sum((tau_i - jnp.mean(tau_i))**2)
 
     return -r_2, tau_computed
 
@@ -87,7 +49,7 @@ def eval_MSE_sol(individual: Callable, Re_data: Dataset) -> Tuple[float, List]:
 
     config()
 
-    total_error, A_computed = compute_MSE_sol_comp(individual, Re_data)
+    total_error, A_computed = compute_MSE_sol(individual, Re_data)
 
     if jnp.isnan(total_error) or total_error > 1e6:
         total_error = 1e6
@@ -101,8 +63,9 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset):
     individual, n_constants = compile_individual_with_consts(tree, toolbox)
 
     def eval_err(consts):
-        def ind_with_consts(x): return individual(x, consts)
-        total_error, _ = compute_MSE_sol_comp(ind_with_consts, Re_data)
+        def ind_with_consts(Re, a_1, a_2, a_3, a_4, a_5): return individual(
+            Re, a_1, a_2, a_3, a_4, a_5, consts)
+        total_error, _ = compute_MSE_sol(ind_with_consts, Re_data)
         return total_error
 
     objective = jit(eval_err)
@@ -157,7 +120,8 @@ def eval_MSE(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
 
-        def callable_with_consts(x): return callable(x, individual.consts)
+        def callable_with_consts(Re, a_1, a_2, a_3, a_4, a_5):
+            return callable(Re, a_1, a_2, a_3, a_4, a_5, individual.consts)
         objvals[i], _ = eval_MSE_sol(callable_with_consts, Re_data)
     return objvals
 
@@ -171,7 +135,8 @@ def predict(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
     for i, individual in enumerate(individuals_batch):
         callable, _ = compile_individual_with_consts(individual, toolbox)
 
-        def callable_with_consts(x): return callable(x, individual.consts)
+        def callable_with_consts(Re, a_1, a_2, a_3, a_4, a_5): return callable(
+            Re, a_1, a_2, a_3, a_4, a_5, individual.consts)
         _, best_sols[i] = eval_MSE_sol(callable_with_consts, Re_data)
 
     return best_sols
@@ -218,25 +183,18 @@ def assign_consts(individuals, attributes):
 
 
 def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, output_path):
-    pset = gp.PrimitiveSetTyped("MAIN", [float], float)
-    # pset = gp.PrimitiveSetTyped("MAIN", [float] + [Array]*5, Array)
+    pset = gp.PrimitiveSetTyped("MAIN", [float]*6, float)
 
     # rename arguments of the tree function
     pset.renameArguments(ARG0="Re")
-    # pset.renameArguments(ARG1="a_1")
-    # pset.renameArguments(ARG2="a_2")
-    # pset.renameArguments(ARG3="a_3")
-    # pset.renameArguments(ARG4="a_4")
-    # pset.renameArguments(ARG5="a_5")
+    pset.renameArguments(ARG1="a_1")
+    pset.renameArguments(ARG2="a_2")
+    pset.renameArguments(ARG3="a_3")
+    pset.renameArguments(ARG4="a_4")
+    pset.renameArguments(ARG5="a_5")
 
     # add constants
     pset.addTerminal(object, float, "a")
-
-    # add base for R^5
-    # for i in range(5):
-    #    e_i = jnp.zeros(5, dtype=dt.float_dtype)
-    #    e_i = e_i.at[i].set(1.)
-    #    pset.addTerminal(e_i, Array, "e_" + str(i))
 
     penalty = config_file_data["gp"]['penalty']
 
@@ -320,7 +278,7 @@ if __name__ == "__main__":
     # from sr_rom.data.data import generate_toy_data
     # k_array, A_B_list = generate_toy_data(5)
     Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
-    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
+    A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
     train_data, val_data, train_val_data, test_data = split_data(
         Re, A_conv, B_conv, tau_conv, a_FOM)
 

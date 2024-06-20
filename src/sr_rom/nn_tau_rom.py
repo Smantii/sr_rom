@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from skorch import NeuralNetRegressor
 from sklearn.model_selection import GridSearchCV
 from matplotlib import cm
+from skorch.callbacks import EarlyStopping
 
 
 class CustomDataset(Dataset):
@@ -58,42 +59,26 @@ else:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device, flush=True)
 
-Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, 0.2)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
 
 t = np.linspace(500, 520, 2001)
 
-Re_grid, t_grid = np.meshgrid(Re, t)
-X = np.zeros((61*2001, 6))
-X[:, 0] = Re_grid.flatten()
-for i in range(5):
-    X[:, i+1] = a_FOM[:, :, i].flatten('F')
-
-train_val = np.zeros((len(train_val_data.X)*2001, 6))
-test = np.zeros((len(test_data.X)*2001, 6))
-for i in range(2001):
-    train_val[len(train_val_data.X)*i:len(train_val_data.X)
-              * (i+1)] = X[train_val_data.y["idx"] + 61*i]
-    test[len(test_data.X)*i:len(test_data.X)*(i+1)] = X[test_data.y["idx"] + 61*i]
-
-X_train_val = train_val
-y_train_val = train_val_data.y["tau"][:, :, 0].flatten('F')
-X_test = test
-y_test = test_data.y["tau"][:, :, 0].flatten('F')
-
 # Standardization
-mean_std_train_Re = [np.mean(X_train_val, axis=0), np.std(X_train_val, axis=0)]
-mean_std_train_comp = [np.mean(y_train_val, axis=0), np.std(y_train_val, axis=0)]
-train_Re_norm = (X_train_val - mean_std_train_Re[0])/mean_std_train_Re[1]
-train_comp_norm = (y_train_val - mean_std_train_comp[0]) / \
+mean_std_train_Re = [np.mean(train_val_data.X, axis=0),
+                     np.std(train_val_data.X, axis=0)]
+mean_std_train_comp = [np.mean(train_val_data.y, axis=0),
+                       np.std(train_val_data.y, axis=0)]
+train_Re_norm = (train_val_data.X - mean_std_train_Re[0])/mean_std_train_Re[1]
+train_comp_norm = (train_val_data.y - mean_std_train_comp[0]) / \
     mean_std_train_comp[1]
-test_Re_norm = (X_test - mean_std_train_Re[0])/mean_std_train_Re[1]
-test_comp_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
+test_Re_norm = (test_data.X - mean_std_train_Re[0])/mean_std_train_Re[1]
+test_comp_norm = (test_data.y - mean_std_train_comp[0])/mean_std_train_comp[1]
 
 train_Re_norm = torch.from_numpy(train_Re_norm).to(torch.float32)
 train_comp_norm = torch.from_numpy(train_comp_norm.reshape(-1, 1)).to(torch.float32)
@@ -101,13 +86,14 @@ test_Re_norm = torch.from_numpy(test_Re_norm).to(torch.float32)
 test_comp_norm = torch.from_numpy(test_comp_norm.reshape(-1, 1)).to(torch.float32)
 
 model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                           optimizer=torch.optim.Adam, max_epochs=50,
+                           optimizer=torch.optim.Adam, max_epochs=10,
                            train_split=None, device="cuda")
 
 params = {
     'lr': [1e-4, 1e-3],
-    'optimizer__weight_decay': [1e-5, 1e-4],
-    'module__hidden_units': [[64, 128, 256, 512, 256, 128, 64],
+    'optimizer__weight_decay': [1e-4, 1e-3, 1e-2],
+    'module__hidden_units': [[64, 128, 256, 128, 64],
+                             [64, 128, 256, 512, 256, 128, 64],
                              [128, 256, 512, 1024, 512, 256, 128]]
 }
 
@@ -116,6 +102,7 @@ gs = GridSearchCV(model, params, cv=3, verbose=3,
                   scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
 gs.fit(train_Re_norm, train_comp_norm)
 print(f"Completed in {time.time() - tic}", flush=True)
+print(f"The best parameters are {gs.best_params_}")
 
 r2_train = 1 + gs.score(train_Re_norm, train_comp_norm) / \
     torch.mean((train_comp_norm - torch.mean(train_comp_norm))**2)

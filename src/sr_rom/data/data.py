@@ -32,7 +32,7 @@ def generate_toy_data(r):
     return k_list, A_B_list
 
 
-def split_data(Re, A, B, tau, a_FOM, test_size=0.2):
+def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
     num_data = len(Re)
     # num_test = round(test_size*num_data)
     # half_num_test = int(num_test/2)
@@ -44,8 +44,22 @@ def split_data(Re, A, B, tau, a_FOM, test_size=0.2):
     # Re_train_val = Re[idx_train_val]
     # Re_test = Re[idx_test]
 
+    # FIXME: fix hardcoded numbers!
+
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
         Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=False)
+
+    X_train_val = np.zeros((len(Re_train_val)*2001, 6))
+    X_test = np.zeros((len(Re_test)*2001, 6))
+    for i in range(2001):
+        X_train_val[len(Re_train_val)*i:len(Re_train_val)
+                    * (i+1)] = X[idx_train_val + 61*i]
+        X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
+
+    y_train_val = tau[idx_train_val, :, 0].flatten('F')
+    y_test = tau[idx_test, :, 0].flatten('F')
+
+    # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
         Re_train_val, idx_train_val, test_size=2/8, random_state=42, shuffle=True)
 
@@ -79,9 +93,9 @@ def split_data(Re, A, B, tau, a_FOM, test_size=0.2):
                  'a_FOM': a_FOM_test, 'idx': idx_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
-    train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
+    train_val_data = Dataset("Re_data", X_train_val, y_train_val)
     val_data = Dataset("Re_data", Re_val, data_val)
-    test_data = Dataset("Re_data", Re_test, data_test)
+    test_data = Dataset("Re_data", X_test, y_test)
 
     return train_data, val_data, train_val_data, test_data
 
@@ -91,13 +105,16 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    num_data = len(dir_list)
+    num_Re = len(dir_list)
+    num_t = 2001
 
-    Re = np.zeros(num_data)
-    A = np.zeros((num_data, r, r))
-    B = np.zeros((num_data, r, r, r))
-    tau = np.zeros((num_data, 2001, r))
-    a_FOM = np.zeros((num_data, 2001, r))
+    Re = np.zeros(num_Re)
+    t = np.linspace(500, 520, num_t)
+
+    A = np.zeros((num_Re, r, r))
+    B = np.zeros((num_Re, r, r, r))
+    tau = np.zeros((num_Re, num_t, r))
+    a_FOM = np.zeros((num_Re, num_t, r))
 
     for i, directory in enumerate(dir_list):
         directory_path = os.path.join(bench_path, directory)
@@ -109,7 +126,7 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
         curr_B = np.loadtxt(directory_path+"/tildeB_N5",
                             delimiter=',', usecols=range(r**2)).reshape((r, r, r))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
-        curr_a_FOM = uk.reshape((2001, 41))[:, 1:(r+1)]
+        curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
 
         Re[i] = curr_Re
         A[i, :, :] = curr_A
@@ -117,7 +134,15 @@ def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
         tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
 
-    return Re, A, B, tau, a_FOM
+    Re_grid, t_grid = np.meshgrid(Re, t)
+
+    # fill matrix of data
+    X = np.zeros((num_Re*num_t, r+1))
+    X[:, 0] = Re_grid.flatten()
+    for i in range(5):
+        X[:, i+1] = a_FOM[:, :, i].flatten('F')
+
+    return Re, A, B, tau, a_FOM, X
 
 
 def smooth_data(A, B, tau, w, num_smoothing, r):
