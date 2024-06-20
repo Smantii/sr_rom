@@ -31,7 +31,7 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(2, hidden_units[0]), nn.ReLU()]
+        hidden_layers = [nn.Linear(6, hidden_units[0]), nn.ReLU()]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
             hidden_layers.append(nn.ReLU())
@@ -46,6 +46,8 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
+
+output_path = sys.argv[1]
 
 if torch.cuda.is_available():
     print(f"GPU: {torch.cuda.get_device_name(0)} is available.", flush=True)
@@ -64,23 +66,20 @@ train_data, val_data, train_val_data, test_data = split_data(
 num_Re = len(Re)
 num_t = tau.shape[1]
 
-
-t = np.linspace(500, 520, num_t)
+t = np.linspace(500, 520, 2001)
 
 Re_grid, t_grid = np.meshgrid(Re, t)
+X = np.zeros((61*2001, 6))
+X[:, 0] = Re_grid.flatten()
+for i in range(5):
+    X[:, i+1] = a_FOM[:, :, i].flatten('F')
 
-# define Reynolds time matrix
-Re_t = np.zeros((num_Re*num_t, 2))
-Re_t[:, 0] = Re_grid.flatten()
-Re_t[:, 1] = t_grid.flatten()
-
-train_val = np.zeros((len(train_val_data.X)*num_t, 2))
-test = np.zeros((len(test_data.X)*num_t, 2))
-for i in range(num_t):
-    train_val[len(train_val_data.X)*i:len(train_val_data.X)*(i+1)
-              ] = Re_t[train_val_data.y["idx"] + num_Re*i, :]
-    test[len(test_data.X)*i:len(test_data.X)*(i+1)
-         ] = Re_t[test_data.y["idx"] + num_Re*i, :]
+train_val = np.zeros((len(train_val_data.X)*2001, 6))
+test = np.zeros((len(test_data.X)*2001, 6))
+for i in range(2001):
+    train_val[len(train_val_data.X)*i:len(train_val_data.X)
+              * (i+1)] = X[train_val_data.y["idx"] + 61*i]
+    test[len(test_data.X)*i:len(test_data.X)*(i+1)] = X[test_data.y["idx"] + 61*i]
 
 X_train_val = train_val
 y_train_val = train_val_data.y["tau"][:, :, 0].flatten('F')
@@ -102,11 +101,11 @@ test_Re_norm = torch.from_numpy(test_Re_norm).to(torch.float32)
 test_comp_norm = torch.from_numpy(test_comp_norm.reshape(-1, 1)).to(torch.float32)
 
 model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                           optimizer=torch.optim.Adam, max_epochs=500,
+                           optimizer=torch.optim.Adam, max_epochs=50,
                            train_split=None, device="cuda")
 
 params = {
-    'lr': [1e-4, 1e-3, 1e-2],
+    'lr': [1e-4, 1e-3],
     'optimizer__weight_decay': [1e-5, 1e-4],
     'module__hidden_units': [[64, 128, 256, 512, 256, 128, 64],
                              [128, 256, 512, 1024, 512, 256, 128]]
@@ -127,9 +126,9 @@ print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
 print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
 # plot prediction
-Re_t_scaled = (Re_t - mean_std_train_Re[0])/mean_std_train_Re[1]
+X_scaled = (X - mean_std_train_Re[0])/mean_std_train_Re[1]
 
-model_out = gs.predict(torch.from_numpy(Re_t_scaled).to(torch.float32).cuda())
+model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
 # rescale out back
 model_out_np = model_out*mean_std_train_comp[1] + mean_std_train_comp[0]
@@ -139,8 +138,6 @@ re_mesh, t_mesh = np.meshgrid(Re, t)
 
 fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={
                        "projection": "3d"},  figsize=(20, 10))
-
-output_path = sys.argv[1]
 
 
 # Plot the surface.
