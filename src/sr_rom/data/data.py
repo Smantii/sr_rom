@@ -56,8 +56,8 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
                     * (i+1)] = X[idx_train_val + 61*i]
         X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
 
-    y_train_val = tau[idx_train_val, :, 0].flatten('F')
-    y_test = tau[idx_test, :, 0].flatten('F')
+    y_train_val = tau[idx_train_val]
+    y_test = tau[idx_test]
 
     # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
@@ -100,7 +100,7 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
     return train_data, val_data, train_val_data, test_data
 
 
-def process_data(r: int, bench_name: str) -> Tuple[Dataset, Dataset, Dataset]:
+def process_data(r: int, bench_name: str):
     data_path = os.path.dirname(os.path.realpath(__file__))
     bench_path = os.path.join(data_path, bench_name)
 
