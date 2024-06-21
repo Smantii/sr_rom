@@ -220,12 +220,13 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     # ----- PLOTS -----
     os.chdir(output_path)
     # extract relevant quantities and init matrices
-    num_re_train_val = train_val_data.X[:, 0]/2001
-    num_re_test = test_data.X[:, 0]/2001
+    num_re_train_val = int(len(train_val_data.X[:, 0])/2001)
+    num_re_test = int(len(test_data.X[:, 0])/2001)
     num_re = num_re_train_val + num_re_test
     num_t = 2001
     idx_train_val = np.arange(num_re_train_val)
-    idx_test = np.arange(num_re_test)
+    # NOTE: we test extrapolation, so test set is at the end of reynolds interval
+    idx_test = np.arange(num_re_train_val, num_re)
     tau = np.zeros((num_re, num_t))
     tau_computed = np.zeros_like(tau)
     re = np.zeros(num_re)
