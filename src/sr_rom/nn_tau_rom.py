@@ -53,83 +53,82 @@ num_t = tau.shape[1]
 
 t = np.linspace(500, 520, 2001)
 
-i = 3
+for i in range(5):
+    y_train = train_val_data.y[:, :, i].flatten("F")
+    y_test = test_data.y[:, :, i].flatten("F")
 
-y_train = train_val_data.y[:, :, i].flatten("F")
-y_test = test_data.y[:, :, i].flatten("F")
+    # Standardization
+    mean_std_X_train = [np.mean(train_val_data.X, axis=0),
+                        np.std(train_val_data.X, axis=0)]
+    mean_std_train_comp = [np.mean(y_train, axis=0),
+                           np.std(y_train, axis=0)]
+    X_train_norm = (train_val_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+    y_train_norm = (y_train - mean_std_train_comp[0]) / \
+        mean_std_train_comp[1]
+    X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+    y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-# Standardization
-mean_std_X_train = [np.mean(train_val_data.X, axis=0),
-                    np.std(train_val_data.X, axis=0)]
-mean_std_train_comp = [np.mean(y_train, axis=0),
-                       np.std(y_train, axis=0)]
-X_train_norm = (train_val_data.X - mean_std_X_train[0])/mean_std_X_train[1]
-y_train_norm = (y_train - mean_std_train_comp[0]) / \
-    mean_std_train_comp[1]
-X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
-y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
+    X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
+    y_train_norm = torch.from_numpy(y_train_norm.reshape(-1, 1)).to(torch.float32)
+    X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
+    y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
-X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
-y_train_norm = torch.from_numpy(y_train_norm.reshape(-1, 1)).to(torch.float32)
-X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
-y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
+    model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
+                               optimizer=torch.optim.Adam, max_epochs=1,
+                               train_split=None, device="cuda")
 
-model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                           optimizer=torch.optim.Adam, max_epochs=1,
-                           train_split=None, device="cuda")
+    params = {'lr': [1e-4],
+              # 'lr': [1e-4, 1e-3],
+              # 'optimizer__weight_decay': [1e-4, 1e-3, 1e-2],
+              'module__hidden_units': [[64, 128, 256, 128, 64]],
+              #                         [64, 128, 256, 512, 256, 128, 64],
+              #                        [128, 256, 512, 1024, 512, 256, 128]]
+              }
 
-params = {
-    'lr': [1e-4, 1e-3],
-    'optimizer__weight_decay': [1e-4, 1e-3, 1e-2],
-    'module__hidden_units': [[64, 128, 256, 128, 64],
-                             [64, 128, 256, 512, 256, 128, 64],
-                             [128, 256, 512, 1024, 512, 256, 128]]
-}
+    tic = time.time()
+    gs = GridSearchCV(model, params, cv=3, verbose=3,
+                      scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
+    gs.fit(X_train_norm, y_train_norm)
+    print(f"Completed in {time.time() - tic}", flush=True)
+    print(f"The best parameters are {gs.best_params_}")
 
-tic = time.time()
-gs = GridSearchCV(model, params, cv=3, verbose=3,
-                  scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
-gs.fit(X_train_norm, y_train_norm)
-print(f"Completed in {time.time() - tic}", flush=True)
-print(f"The best parameters are {gs.best_params_}")
+    r2_train = 1 + gs.score(X_train_norm, y_train_norm) / \
+        torch.mean((y_train_norm - torch.mean(y_train_norm))**2)
+    r2_test = 1 + gs.score(X_test_norm, y_test_norm) / \
+        torch.mean((y_test_norm - torch.mean(y_test_norm))**2)
 
-r2_train = 1 + gs.score(X_train_norm, y_train_norm) / \
-    torch.mean((y_train_norm - torch.mean(y_train_norm))**2)
-r2_test = 1 + gs.score(X_test_norm, y_test_norm) / \
-    torch.mean((y_test_norm - torch.mean(y_test_norm))**2)
+    print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
+    print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
-print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
-print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
+    # plot prediction
+    X_scaled = (X - mean_std_X_train[0])/mean_std_X_train[1]
 
-# plot prediction
-X_scaled = (X - mean_std_X_train[0])/mean_std_X_train[1]
+    model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
-model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
+    # rescale out back
+    model_out_np = model_out*mean_std_train_comp[1] + mean_std_train_comp[0]
+    pred = model_out_np.reshape((num_Re, num_t), order="F")
 
-# rescale out back
-model_out_np = model_out*mean_std_train_comp[1] + mean_std_train_comp[0]
-pred = model_out_np.reshape((num_Re, num_t), order="F")
+    re_mesh, t_mesh = np.meshgrid(Re, t)
 
-re_mesh, t_mesh = np.meshgrid(Re, t)
+    fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={
+        "projection": "3d"},  figsize=(20, 10))
 
-fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={
-                       "projection": "3d"},  figsize=(20, 10))
+    # Plot the surface.
+    surf = ax[0].plot_surface(re_mesh, t_mesh, tau[:, :, i].T, cmap=cm.coolwarm,
+                              linewidth=0, antialiased=False)
+    surf_comp = ax[1].plot_surface(re_mesh, t_mesh, pred.T, cmap=cm.coolwarm,
+                                   linewidth=0, antialiased=False)
+    ax[0].set_xlabel(r"$Re$")
+    ax[0].set_ylabel(r"time")
+    ax[1].set_xlabel(r"$Re$")
+    ax[1].set_ylabel(r"time")
+    ax[0].set_title(r"VMS-ROM Closure term")
+    ax[1].set_title(r"NN-ROM Closure term")
+    plt.colorbar(surf, shrink=0.5)
+    plt.colorbar(surf_comp, shrink=0.5)
+    plt.savefig(output_path + "nn_rom_tau.png", dpi=300)
 
-
-# Plot the surface.
-surf = ax[0].plot_surface(re_mesh, t_mesh, tau_conv[:, :, i].T, cmap=cm.coolwarm,
-                          linewidth=0, antialiased=False)
-surf_comp = ax[1].plot_surface(re_mesh, t_mesh, pred.T, cmap=cm.coolwarm,
-                               linewidth=0, antialiased=False)
-ax[0].set_xlabel(r"$Re$")
-ax[0].set_ylabel(r"time")
-ax[1].set_xlabel(r"$Re$")
-ax[1].set_ylabel(r"time")
-ax[0].set_title(r"VMS-ROM Closure term")
-ax[1].set_title(r"NN-ROM Closure term")
-plt.colorbar(surf, shrink=0.5)
-plt.colorbar(surf_comp, shrink=0.5)
-plt.savefig(output_path + "nn_rom_tau.png", dpi=300)
-
-model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
-np.save(output_path + "model_pred.npy", model_out_reshaped)
+    model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
+    np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
+    gs.best_estimator_.save_params(output_path + "model_param_" + str(i) + ".pkl")
