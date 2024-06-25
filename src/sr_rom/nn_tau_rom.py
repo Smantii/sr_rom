@@ -127,7 +127,7 @@ for i in range(5):
     ax[1].set_title(r"NN-ROM Closure term")
     plt.colorbar(surf, shrink=0.5)
     plt.colorbar(surf_comp, shrink=0.5)
-    plt.savefig(output_path + "nn_rom_tau.png", dpi=300)
+    plt.savefig(output_path + "nn_rom_tau_" + str(i) + ".png", dpi=300)
 
     model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
     np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
