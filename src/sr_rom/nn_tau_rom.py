@@ -16,7 +16,7 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(6, hidden_units[0]), nn.ReLU()]
+        hidden_layers = [nn.Linear(5, hidden_units[0]), nn.ReLU()]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
             hidden_layers.append(nn.ReLU())
@@ -58,14 +58,14 @@ for i in range(5):
     y_test = test_data.y[:, :, i].flatten("F")
 
     # Standardization
-    mean_std_X_train = [np.mean(train_val_data.X, axis=0),
-                        np.std(train_val_data.X, axis=0)]
+    mean_std_X_train = [np.mean(train_val_data.X[:, 1:], axis=0),
+                        np.std(train_val_data.X[:, 1:], axis=0)]
     mean_std_train_comp = [np.mean(y_train, axis=0),
                            np.std(y_train, axis=0)]
-    X_train_norm = (train_val_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+    X_train_norm = (train_val_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
     y_train_norm = (y_train - mean_std_train_comp[0]) / \
         mean_std_train_comp[1]
-    X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+    X_test_norm = (test_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
     y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
     X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
@@ -74,20 +74,19 @@ for i in range(5):
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
     model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                               optimizer=torch.optim.Adam, max_epochs=1,
+                               optimizer=torch.optim.Adam, max_epochs=100,
                                train_split=None, device="cuda")
 
-    params = {'lr': [1e-4],
-              # 'lr': [1e-4, 1e-3],
-              # 'optimizer__weight_decay': [1e-4, 1e-3, 1e-2],
-              'module__hidden_units': [[64, 128, 256, 128, 64]],
-              #                         [64, 128, 256, 512, 256, 128, 64],
-              #                        [128, 256, 512, 1024, 512, 256, 128]]
+    params = {'lr': [1e-4, 1e-3],
+              'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
+              'module__hidden_units': [[64, 128, 256, 128, 64],
+                                       [64, 128, 256, 512, 256, 128, 64],
+                                       [128, 256, 512, 1024, 512, 256, 128]]
               }
 
     tic = time.time()
-    gs = GridSearchCV(model, params, cv=3, verbose=3,
-                      scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
+    gs = GridSearchCV(model, params, cv=5, verbose=3,
+                      scoring="neg_mean_squared_error", refit=True, n_jobs=8, return_train_score=True)
     gs.fit(X_train_norm, y_train_norm)
     print(f"Completed in {time.time() - tic}", flush=True)
     print(f"The best parameters are {gs.best_params_}")
@@ -101,7 +100,7 @@ for i in range(5):
     print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
     # plot prediction
-    X_scaled = (X - mean_std_X_train[0])/mean_std_X_train[1]
+    X_scaled = (X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
 
     model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
