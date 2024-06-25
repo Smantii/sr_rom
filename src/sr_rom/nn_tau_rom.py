@@ -1,4 +1,3 @@
-
 from sr_rom.data.data import process_data, split_data, smooth_data
 import time
 import sys
@@ -10,21 +9,6 @@ from torch.utils.data import Dataset
 from skorch import NeuralNetRegressor
 from sklearn.model_selection import GridSearchCV
 from matplotlib import cm
-from skorch.callbacks import EarlyStopping
-
-
-class CustomDataset(Dataset):
-    def __init__(self, Re, targets):
-        self.Re = Re
-        self.targets = targets
-
-    def __getitem__(self, idx):
-        Re_idx = self.Re[idx]
-        target_idx = self.targets[idx]
-        return Re_idx, target_idx
-
-    def __len__(self):
-        return len(self.targets)
 
 
 class NeuralNetwork(nn.Module):
@@ -62,31 +46,36 @@ print(device, flush=True)
 Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2)
+    Re, A_conv, B_conv, tau, a_FOM, X, 0.2)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
 
 t = np.linspace(500, 520, 2001)
 
-# Standardization
-mean_std_train_Re = [np.mean(train_val_data.X, axis=0),
-                     np.std(train_val_data.X, axis=0)]
-mean_std_train_comp = [np.mean(train_val_data.y, axis=0),
-                       np.std(train_val_data.y, axis=0)]
-train_Re_norm = (train_val_data.X - mean_std_train_Re[0])/mean_std_train_Re[1]
-train_comp_norm = (train_val_data.y - mean_std_train_comp[0]) / \
-    mean_std_train_comp[1]
-test_Re_norm = (test_data.X - mean_std_train_Re[0])/mean_std_train_Re[1]
-test_comp_norm = (test_data.y - mean_std_train_comp[0])/mean_std_train_comp[1]
+i = 3
 
-train_Re_norm = torch.from_numpy(train_Re_norm).to(torch.float32)
-train_comp_norm = torch.from_numpy(train_comp_norm.reshape(-1, 1)).to(torch.float32)
-test_Re_norm = torch.from_numpy(test_Re_norm).to(torch.float32)
-test_comp_norm = torch.from_numpy(test_comp_norm.reshape(-1, 1)).to(torch.float32)
+y_train = train_val_data.y[:, :, i].flatten("F")
+y_test = test_data.y[:, :, i].flatten("F")
+
+# Standardization
+mean_std_X_train = [np.mean(train_val_data.X, axis=0),
+                    np.std(train_val_data.X, axis=0)]
+mean_std_train_comp = [np.mean(y_train, axis=0),
+                       np.std(y_train, axis=0)]
+X_train_norm = (train_val_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+y_train_norm = (y_train - mean_std_train_comp[0]) / \
+    mean_std_train_comp[1]
+X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
+
+X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
+y_train_norm = torch.from_numpy(y_train_norm.reshape(-1, 1)).to(torch.float32)
+X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
+y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
 model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                           optimizer=torch.optim.Adam, max_epochs=10,
+                           optimizer=torch.optim.Adam, max_epochs=1,
                            train_split=None, device="cuda")
 
 params = {
@@ -100,20 +89,20 @@ params = {
 tic = time.time()
 gs = GridSearchCV(model, params, cv=3, verbose=3,
                   scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
-gs.fit(train_Re_norm, train_comp_norm)
+gs.fit(X_train_norm, y_train_norm)
 print(f"Completed in {time.time() - tic}", flush=True)
 print(f"The best parameters are {gs.best_params_}")
 
-r2_train = 1 + gs.score(train_Re_norm, train_comp_norm) / \
-    torch.mean((train_comp_norm - torch.mean(train_comp_norm))**2)
-r2_test = 1 + gs.score(test_Re_norm, test_comp_norm) / \
-    torch.mean((test_comp_norm - torch.mean(test_comp_norm))**2)
+r2_train = 1 + gs.score(X_train_norm, y_train_norm) / \
+    torch.mean((y_train_norm - torch.mean(y_train_norm))**2)
+r2_test = 1 + gs.score(X_test_norm, y_test_norm) / \
+    torch.mean((y_test_norm - torch.mean(y_test_norm))**2)
 
 print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
 print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
 # plot prediction
-X_scaled = (X - mean_std_train_Re[0])/mean_std_train_Re[1]
+X_scaled = (X - mean_std_X_train[0])/mean_std_X_train[1]
 
 model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
@@ -128,7 +117,7 @@ fig, ax = plt.subplots(nrows=1, ncols=2, subplot_kw={
 
 
 # Plot the surface.
-surf = ax[0].plot_surface(re_mesh, t_mesh, tau_conv[:, :, 0].T, cmap=cm.coolwarm,
+surf = ax[0].plot_surface(re_mesh, t_mesh, tau_conv[:, :, i].T, cmap=cm.coolwarm,
                           linewidth=0, antialiased=False)
 surf_comp = ax[1].plot_surface(re_mesh, t_mesh, pred.T, cmap=cm.coolwarm,
                                linewidth=0, antialiased=False)
@@ -140,4 +129,7 @@ ax[0].set_title(r"VMS-ROM Closure term")
 ax[1].set_title(r"NN-ROM Closure term")
 plt.colorbar(surf, shrink=0.5)
 plt.colorbar(surf_comp, shrink=0.5)
-plt.savefig(output_path + "nn_rom_tau_0.png", dpi=300)
+plt.savefig(output_path + "nn_rom_tau.png", dpi=300)
+
+model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
+np.save(output_path + "model_pred.npy", model_out_reshaped)
