@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
-from torch.utils.data import Dataset
 from skorch import NeuralNetRegressor
 from sklearn.model_selection import GridSearchCV
 from matplotlib import cm
@@ -16,10 +15,10 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(5, hidden_units[0]), nn.ReLU()]
+        hidden_layers = [nn.Linear(5, hidden_units[0]), nn.LeakyReLU()]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
-            hidden_layers.append(nn.ReLU())
+            hidden_layers.append(nn.LeakyReLU())
         # append last layer
         hidden_layers.append(nn.Linear(hidden_units[-1], 1))
 
@@ -33,6 +32,8 @@ class NeuralNetwork(nn.Module):
 
 
 output_path = sys.argv[1]
+np.random.seed(42)
+
 
 if torch.cuda.is_available():
     print(f"GPU: {torch.cuda.get_device_name(0)} is available.", flush=True)
@@ -54,6 +55,7 @@ num_t = tau.shape[1]
 t = np.linspace(500, 520, 2001)
 
 for i in range(5):
+    i = 3
     y_train = train_val_data.y[:, :, i].flatten("F")
     y_test = test_data.y[:, :, i].flatten("F")
 
@@ -73,6 +75,14 @@ for i in range(5):
     X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
+    # reshuffling
+    p_train = np.random.permutation(len(X_train_norm))
+    p_test = np.random.permutation(len(X_test_norm))
+    X_train_norm = X_train_norm[p_train]
+    y_train_norm = y_train_norm[p_train]
+    X_test_norm = X_test_norm[p_test]
+    y_test_norm = y_test_norm[p_test]
+
     model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
                                optimizer=torch.optim.Adam, max_epochs=100,
                                train_split=None, device="cuda")
@@ -85,7 +95,7 @@ for i in range(5):
               }
 
     tic = time.time()
-    gs = GridSearchCV(model, params, cv=5, verbose=3,
+    gs = GridSearchCV(model, params, cv=3, verbose=3,
                       scoring="neg_mean_squared_error", refit=True, n_jobs=8, return_train_score=True)
     gs.fit(X_train_norm, y_train_norm)
     print(f"Completed in {time.time() - tic}", flush=True)
@@ -131,3 +141,4 @@ for i in range(5):
     model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
     np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
     gs.best_estimator_.save_params(output_path + "model_param_" + str(i) + ".pkl")
+    break
