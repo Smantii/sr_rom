@@ -11,7 +11,7 @@ from matplotlib import cm
 
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, hidden_units):
+    def __init__(self, hidden_units, dropout_rate=0.5):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
@@ -19,6 +19,7 @@ class NeuralNetwork(nn.Module):
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
             hidden_layers.append(nn.LeakyReLU())
+            hidden_layers.append(nn.Dropout(dropout_rate))
         # append last layer
         hidden_layers.append(nn.Linear(hidden_units[-1], 1))
 
@@ -78,7 +79,7 @@ for i in range(5):
     X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
-    model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=3,
+    model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
                                optimizer=torch.optim.Adam, max_epochs=100,
                                train_split=None, device="cuda", iterator_train__shuffle=True)
 
@@ -86,7 +87,8 @@ for i in range(5):
               'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
               'module__hidden_units': [[64, 128, 256, 128, 64],
                                        [64, 128, 256, 512, 256, 128, 64],
-                                       [128, 256, 512, 1024, 512, 256, 128]]
+                                       [128, 256, 512, 1024, 512, 256, 128]],
+              'module__dropout_rate': [0.4, 0.5]
               }
 
     tic = time.time()
