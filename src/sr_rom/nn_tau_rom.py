@@ -32,7 +32,9 @@ class NeuralNetwork(nn.Module):
 
 
 output_path = sys.argv[1]
-np.random.seed(42)
+seed = 42
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 
 if torch.cuda.is_available():
@@ -55,16 +57,17 @@ num_t = tau.shape[1]
 t = np.linspace(500, 520, 2001)
 
 for i in range(5):
-    i = 3
-    y_train = train_val_data.y[:, :, i].flatten("F")
+    idx_train = np.argsort(train_val_data.X[:, 0])
+    y_train = train_val_data.y[:, :, i].flatten("F")[idx_train]
     y_test = test_data.y[:, :, i].flatten("F")
 
     # Standardization
-    mean_std_X_train = [np.mean(train_val_data.X[:, 1:], axis=0),
-                        np.std(train_val_data.X[:, 1:], axis=0)]
+    mean_std_X_train = [np.mean(train_val_data.X[idx_train, 1:], axis=0),
+                        np.std(train_val_data.X[idx_train, 1:], axis=0)]
     mean_std_train_comp = [np.mean(y_train, axis=0),
                            np.std(y_train, axis=0)]
-    X_train_norm = (train_val_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+    X_train_norm = (train_val_data.X[idx_train, 1:] -
+                    mean_std_X_train[0])/mean_std_X_train[1]
     y_train_norm = (y_train - mean_std_train_comp[0]) / \
         mean_std_train_comp[1]
     X_test_norm = (test_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
@@ -75,17 +78,9 @@ for i in range(5):
     X_test_norm = torch.from_numpy(X_test_norm).to(torch.float32)
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
-    # reshuffling
-    p_train = np.random.permutation(len(X_train_norm))
-    p_test = np.random.permutation(len(X_test_norm))
-    X_train_norm = X_train_norm[p_train]
-    y_train_norm = y_train_norm[p_train]
-    X_test_norm = X_test_norm[p_test]
-    y_test_norm = y_test_norm[p_test]
-
-    model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
+    model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=3,
                                optimizer=torch.optim.Adam, max_epochs=100,
-                               train_split=None, device="cuda")
+                               train_split=None, device="cuda", iterator_train__shuffle=True)
 
     params = {'lr': [1e-4, 1e-3],
               'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
@@ -141,4 +136,3 @@ for i in range(5):
     model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
     np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
     gs.best_estimator_.save_params(output_path + "model_param_" + str(i) + ".pkl")
-    break
