@@ -15,7 +15,8 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(5, hidden_units[0]), nn.LeakyReLU()]
+        hidden_layers = [nn.Linear(5, hidden_units[0]),
+                         nn.LeakyReLU(), nn.Dropout(dropout_rate)]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
             hidden_layers.append(nn.LeakyReLU())
@@ -50,7 +51,7 @@ print(device, flush=True)
 Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau, a_FOM, X, 0.2)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
