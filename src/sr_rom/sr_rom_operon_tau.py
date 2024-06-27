@@ -106,6 +106,14 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
         X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
         y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
+        # reshuffling
+        p_train = np.random.permutation(len(X_train_norm))
+        p_test = np.random.permutation(len(X_test_norm))
+        X_train_norm = X_train_norm[p_train]
+        y_train_norm = y_train_norm[p_train]
+        X_test_norm = X_test_norm[p_test]
+        y_test_norm = y_test_norm[p_test]
+
         reg = SymbolicRegressor(
             allowed_symbols=symbols,
             optimizer_iterations=10,
@@ -115,7 +123,7 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
         )
 
         params = {
-            'max_length': [20, 30, 40],
+            'max_length': [20, 40, 60, 80, 100],
             'tournament_size': [2, 3],
         }
 
