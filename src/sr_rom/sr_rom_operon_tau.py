@@ -71,17 +71,6 @@ def save_results(reg, X, X_train_val, y_train_val, X_test, y_test,
     plt.colorbar(surf_comp, shrink=0.5, label=ylabel)
     plt.savefig(output_path + prb_name + "_surface.png", dpi=100)
 
-    # plot all the sections
-    for i in range(num_re):
-        plt.clf()
-        plt.figure(num=1, figsize=(8, 5))
-        plt.plot(t, tau_conv[i, :], label="Data")
-        plt.plot(t, prediction[i, :], label="Prediction")
-        plt.xlabel(r"$t$")
-        plt.ylabel(ylabel + " section")
-        plt.legend(loc="upper right")
-        plt.savefig(output_path + prb_name + "_section_" + str(i) + ".png", dpi=100)
-
     print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
 
@@ -140,7 +129,7 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
 if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
-    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable'
+    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'
     # load data
     Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 
@@ -151,8 +140,8 @@ if __name__ == "__main__":
         # process data
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
-        _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2)
+        _, _, train_val_data, test_data, _ = split_data(
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=True)
 
         sr_rom_operon(train_val_data, test_data, X, symbols,
                       output_path + new_folder + "/")

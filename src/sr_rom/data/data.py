@@ -32,7 +32,7 @@ def generate_toy_data(r):
     return k_list, A_B_list
 
 
-def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
+def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
     num_data = len(Re)
     # num_test = round(test_size*num_data)
     # half_num_test = int(num_test/2)
@@ -47,7 +47,7 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
     # FIXME: fix hardcoded numbers!
 
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
-        Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=False)
+        Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=shuffle_test)
 
     X_train_val = np.zeros((len(Re_train_val)*2001, 6))
     X_test = np.zeros((len(Re_test)*2001, 6))
@@ -97,7 +97,8 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2):
     val_data = Dataset("Re_data", Re_val, data_val)
     test_data = Dataset("Re_data", X_test, y_test)
 
-    return train_data, val_data, train_val_data, test_data
+    # FIXME: improve this!
+    return train_data, val_data, train_val_data, test_data, (idx_train_val, idx_test)
 
 
 def process_data(r: int, bench_name: str):
