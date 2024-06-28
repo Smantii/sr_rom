@@ -81,27 +81,21 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
     print("Started training procedure for tau", flush=True)
     # training procedure for tau
     for i in range(5):
-        y_train = train_val_data.y[:, :, i].flatten("F")
+        idx_train = np.argsort(train_val_data.X[:, 0])
+        y_train = train_val_data.y[:, :, i].flatten("F")[idx_train]
         y_test = test_data.y[:, :, i].flatten("F")
 
         # Standardization
-        mean_std_X_train = [np.mean(train_val_data.X, axis=0),
-                            np.std(train_val_data.X, axis=0)]
+        mean_std_X_train = [np.mean(train_val_data.X[idx_train, 1:], axis=0),
+                            np.std(train_val_data.X[idx_train, 1:], axis=0)]
         mean_std_train_comp = [np.mean(y_train, axis=0),
                                np.std(y_train, axis=0)]
-        X_train_norm = (train_val_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+        X_train_norm = (train_val_data.X[idx_train, 1:] -
+                        mean_std_X_train[0])/mean_std_X_train[1]
         y_train_norm = (y_train - mean_std_train_comp[0]) / \
             mean_std_train_comp[1]
-        X_test_norm = (test_data.X - mean_std_X_train[0])/mean_std_X_train[1]
+        X_test_norm = (test_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
         y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
-
-        # reshuffling
-        p_train = np.random.permutation(len(X_train_norm))
-        p_test = np.random.permutation(len(X_test_norm))
-        X_train_norm = X_train_norm[p_train]
-        y_train_norm = y_train_norm[p_train]
-        X_test_norm = X_test_norm[p_test]
-        y_test_norm = y_test_norm[p_test]
 
         reg = SymbolicRegressor(
             allowed_symbols=symbols,
@@ -116,7 +110,8 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
             'tournament_size': [2, 3],
         }
 
-        gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True, n_jobs=-1)
+        gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True,
+                          n_jobs=-1, return_train_score=True)
         tic = time.time()
         gs.fit(X_train_norm, y_train_norm)
         toc = time.time()
