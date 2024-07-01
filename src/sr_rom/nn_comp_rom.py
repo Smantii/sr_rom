@@ -12,26 +12,21 @@ import time
 
 
 class NeuralNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, hidden_units, dropout_rate=0.5):
         super().__init__()
         self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(1, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, 256),
-            nn.ReLU(),
-            nn.Linear(256, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-        )
+        # define hidden_layers
+        hidden_layers = [nn.Linear(1, hidden_units[0]),
+                         nn.LeakyReLU(), nn.Dropout(dropout_rate)]
+        for i in range(1, len(hidden_units)):
+            hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
+            hidden_layers.append(nn.LeakyReLU())
+            hidden_layers.append(nn.Dropout(dropout_rate))
+        # append last layer
+        hidden_layers.append(nn.Linear(hidden_units[-1], 1))
+
+        # nn stack
+        self.linear_relu_stack = nn.Sequential(*hidden_layers)
 
     def forward(self, x):
         x = self.flatten(x)
@@ -107,15 +102,34 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
 
 
 def nn_rom(train_val_data, test_data, output_path):
+    if torch.cuda.is_available():
+        print(f"GPU: {torch.cuda.get_device_name(0)} is available.", flush=True)
+    else:
+        print("No GPU available. Training will run on CPU.", flush=True)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device, flush=True)
+
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
-    max_epochs = 1000
+    max_epochs = 2000
 
-    params = {
-        'lr': [1e-4, 1e-3, 1e-2],
-        'optimizer__weight_decay': [1e-5, 1e-4],
-    }
+    params = {'lr': [1e-4, 1e-3],
+              'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
+              'module__hidden_units': [[64, 128, 256, 128, 64],
+                                       [64, 128, 256, 512, 256, 128, 64],
+                                       [128, 256, 512, 1024, 512, 256, 128]],
+              'module__dropout_rate': [0.]
+              }
+
+    seed = 42
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    # reshuffling
+    p_train = np.random.permutation(len(train_val_data.X))
+    p_test = np.random.permutation(len(test_data.X))
 
     print("Started training procedure for A", flush=True)
     # training procedure for A
@@ -137,11 +151,17 @@ def nn_rom(train_val_data, test_data, output_path):
             test_Re_norm = (test_Re - mean_std_train_Re[0])/mean_std_train_Re[1]
             test_comp_norm = (test_comp - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-            model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
-                                       optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
+            train_Re_norm = train_Re_norm[p_train]
+            train_comp_norm = train_comp_norm[p_train]
+            test_Re_norm = test_Re_norm[p_test]
+            test_comp_norm = test_comp_norm[p_test]
 
-            gs = GridSearchCV(model, params, cv=5, verbose=0,
-                              scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
+            model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
+                                       optimizer=torch.optim.Adam, max_epochs=max_epochs,
+                                       train_split=None, iterator_train__shuffle=True, device="cuda")
+
+            gs = GridSearchCV(model, params, cv=3, verbose=3,
+                              scoring="neg_mean_squared_error", refit=True, n_jobs=3)
             tic = time.time()
             gs.fit(train_Re_norm, train_comp_norm)
             toc = time.time()
@@ -173,11 +193,18 @@ def nn_rom(train_val_data, test_data, output_path):
                 test_comp_norm = (
                     test_comp - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-                model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
-                                           optimizer=torch.optim.Adam, max_epochs=max_epochs, train_split=None)
+                # reshuffling
+                train_Re_norm = train_Re_norm[p_train]
+                train_comp_norm = train_comp_norm[p_train]
+                test_Re_norm = test_Re_norm[p_test]
+                test_comp_norm = test_comp_norm[p_test]
 
-                gs = GridSearchCV(model, params, cv=5, verbose=0,
-                                  scoring="neg_mean_squared_error", refit=True, n_jobs=-1)
+                model = NeuralNetRegressor(module=NeuralNetwork, batch_size=-1, verbose=0,
+                                           optimizer=torch.optim.Adam, max_epochs=max_epochs,
+                                           train_split=None, device="cuda")
+
+                gs = GridSearchCV(model, params, cv=3, verbose=0,
+                                  scoring="neg_mean_squared_error", refit=True, n_jobs=3)
                 tic = time.time()
                 gs.fit(train_Re_norm, train_comp_norm)
                 toc = time.time()
@@ -197,11 +224,11 @@ if __name__ == "__main__":
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # load and process data
-        Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+        Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.6, shuffle_test=True)
 
         nn_rom(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)

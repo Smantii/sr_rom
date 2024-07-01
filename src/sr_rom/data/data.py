@@ -86,19 +86,19 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
     data_train = {'A': A_train, 'B': B_train, 'tau': tau_train,
                   'a_FOM': a_FOM_train, 'idx': idx_train}
     data_train_val = {'A': A_train_val, 'B': B_train_val,
-                      'tau': tau_train_val, 'a_FOM': a_FOM_train_val, 'idx': idx_train_val}
+                      'tau': tau_train_val, 'a_FOM': a_FOM_train_val,
+                      'idx': idx_train_val}
     data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
                 'a_FOM': a_FOM_val, 'idx': idx_val}
     data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
                  'a_FOM': a_FOM_test, 'idx': idx_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
-    train_val_data = Dataset("Re_data", X_train_val, y_train_val)
+    train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
     val_data = Dataset("Re_data", Re_val, data_val)
-    test_data = Dataset("Re_data", X_test, y_test)
+    test_data = Dataset("Re_data", Re_test, data_test)
 
-    # FIXME: improve this!
-    return train_data, val_data, train_val_data, test_data, (idx_train_val, idx_test)
+    return train_data, val_data, train_val_data, test_data
 
 
 def process_data(r: int, bench_name: str):

@@ -83,6 +83,14 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
+    seed = 42
+    np.random.seed(seed)
+
+    params = {
+        'max_length': [20, 40, 60, 80, 100],
+        'tournament_size': [2, 3],
+    }
+
     print("Started training procedure for A", flush=True)
     # training procedure for A
     for i in range(5):
@@ -101,26 +109,35 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
             test_Re_norm = (X_test - mean_std_train_Re[0])/mean_std_train_Re[1]
             test_comp_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
+            # reshuffling
+            p_train = np.random.permutation(len(train_Re_norm))
+            p_test = np.random.permutation(len(test_Re_norm))
+            train_Re_norm = train_Re_norm[p_train]
+            train_comp_norm = train_comp_norm[p_train]
+            test_Re_norm = test_Re_norm[p_test]
+            test_comp_norm = test_comp_norm[p_test]
+
             reg = SymbolicRegressor(
                 allowed_symbols=symbols,
+                generations=50,
                 optimizer_iterations=10,
                 n_threads=16,
+                epsilon=0,
                 max_evaluations=int(1e6),
             )
 
-            params = {
-                'max_length': [20, 30, 40],
-                'epsilon': [0.00001, 0.0001, 0.001],
-            }
-
-            gs = GridSearchCV(reg, params, cv=5, verbose=0, refit=True, n_jobs=-1)
+            gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True, n_jobs=-1)
             tic = time.time()
             gs.fit(train_Re_norm, train_comp_norm)
             toc = time.time()
 
+            print(gs.best_params_)
+
             save_results(gs.best_estimator_, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                          mean_std_train_Re, mean_std_train_comp,
                          "A_" + str(i) + str(j), r"$A_{ij}$", output_path, toc-tic)
+
+            assert False
 
     print("Done!", flush=True)
 
@@ -141,6 +158,14 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                 test_Re_norm = (X_test - np.mean(X_train_val))/np.std(X_train_val)
                 test_comp_norm = (y_test - np.mean(y_train_val))/np.std(y_train_val)
 
+                # reshuffling
+                p_train = np.random.permutation(len(train_Re_norm))
+                p_test = np.random.permutation(len(test_Re_norm))
+                train_Re_norm = train_Re_norm[p_train]
+                train_comp_norm = train_comp_norm[p_train]
+                test_Re_norm = test_Re_norm[p_test]
+                test_comp_norm = test_comp_norm[p_test]
+
                 reg = SymbolicRegressor(
                     allowed_symbols=symbols,
                     optimizer_iterations=10,
@@ -148,11 +173,6 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                     epsilon=0,
                     max_evaluations=int(1e6),
                 )
-
-                params = {
-                    'max_length': [20, 30, 40],
-                    'tournament_size': [2, 3],
-                }
 
                 gs = GridSearchCV(reg, params, cv=3, verbose=0, refit=True, n_jobs=-1)
                 tic = time.time()
@@ -169,19 +189,19 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
 if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
-    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable'
+    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'
     # load data
-    Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+    Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 
     for w in windows:
-        print(f"---Collecting results for window size {w}...!---", flush=True)
+        print(f"---Collecting results for window size {w}...---", flush=True)
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # process data
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, test_size=0.2)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.6, shuffle_test=True)
 
         sr_rom_operon(train_val_data, test_data, symbols,
                       output_path + new_folder + "/")

@@ -14,7 +14,7 @@ t_full = np.linspace(500., 520., 20001)
 
 # split in training and test
 train_data, val_data, train_val_data, test_data, (train_Re_idx, test_Re_idx) = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2, True)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.6, True)
 
 # linearly interpolate w.r.t. Reynolds and time
 tau_interp = np.zeros((61, 20001, 5))*np.nan
@@ -33,13 +33,14 @@ true_l2_error = np.loadtxt(
     "/home/smanti/SR-ROM/src/sr_rom/results_20/results_w_3_n_2/vmsrom_l2_error.csv", delimiter=",", skiprows=1)
 
 # for Re, idx in zip(test_Re, test_Re_idx):
-# for idx, Re in enumerate(Re):
-#    istep, err_l2_avg, err_h10_avg = main(int(Re), tau_interp, idx)
-#   l2_error.append(err_l2_avg)
+for idx, Re in enumerate(Re):
+    istep, err_l2_avg, err_h10_avg = main(int(Re), tau_interp, idx)
+    l2_error.append(err_l2_avg)
 
-# np.save("l2_error_test.npy", l2_error)
+l2_error = np.array(l2_error)
+np.save("l2_error_test_60.npy", l2_error)
 
-l2_error = np.load("l2_error_test.npy")
+# l2_error = np.load("l2_error_test_50.npy")
 
 test_ord = np.argsort(test_Re)
 
@@ -53,7 +54,7 @@ plt.ylabel(r"$\epsilon_{L^2}$")
 plt.ylim(bottom=0.093)
 
 plt.legend()
-plt.savefig("error_plot_20.png", dpi=300)
+plt.savefig("error_plot_60.png", dpi=300)
 
 
 print(
