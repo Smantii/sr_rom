@@ -79,7 +79,7 @@ def save_results(reg, X_train_val, y_train_val, X_test, y_test,
     plt.clf()
 
 
-def sr_rom_operon(train_val_data, test_data, symbols, output_path):
+def sr_rom_operon(train_val_data, test_data, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
@@ -87,9 +87,16 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
     np.random.seed(seed)
 
     params = {
-        'max_length': [20, 40, 60, 80, 100],
+        'max_length': [50, 100, 150, 200],
         'tournament_size': [2, 3],
+        'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable',
+                            'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable',
+                            'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable']
     }
+
+    # reshuffling
+    p_train = np.random.permutation(len(train_Re_norm))
+    p_test = np.random.permutation(len(test_Re_norm))
 
     print("Started training procedure for A", flush=True)
     # training procedure for A
@@ -109,17 +116,14 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
             test_Re_norm = (X_test - mean_std_train_Re[0])/mean_std_train_Re[1]
             test_comp_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-            # reshuffling
-            p_train = np.random.permutation(len(train_Re_norm))
-            p_test = np.random.permutation(len(test_Re_norm))
+            
             train_Re_norm = train_Re_norm[p_train]
             train_comp_norm = train_comp_norm[p_train]
             test_Re_norm = test_Re_norm[p_test]
             test_comp_norm = test_comp_norm[p_test]
 
             reg = SymbolicRegressor(
-                allowed_symbols=symbols,
-                generations=50,
+                generations=100,
                 optimizer_iterations=10,
                 n_threads=16,
                 epsilon=0,
@@ -136,8 +140,6 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
             save_results(gs.best_estimator_, train_Re_norm, train_comp_norm, test_Re_norm, test_comp_norm,
                          mean_std_train_Re, mean_std_train_comp,
                          "A_" + str(i) + str(j), r"$A_{ij}$", output_path, toc-tic)
-
-            assert False
 
     print("Done!", flush=True)
 
@@ -158,16 +160,14 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
                 test_Re_norm = (X_test - np.mean(X_train_val))/np.std(X_train_val)
                 test_comp_norm = (y_test - np.mean(y_train_val))/np.std(y_train_val)
 
-                # reshuffling
-                p_train = np.random.permutation(len(train_Re_norm))
-                p_test = np.random.permutation(len(test_Re_norm))
+
                 train_Re_norm = train_Re_norm[p_train]
                 train_comp_norm = train_comp_norm[p_train]
                 test_Re_norm = test_Re_norm[p_test]
                 test_comp_norm = test_comp_norm[p_test]
 
                 reg = SymbolicRegressor(
-                    allowed_symbols=symbols,
+                    generations=100,
                     optimizer_iterations=10,
                     n_threads=16,
                     epsilon=0,
@@ -189,7 +189,7 @@ def sr_rom_operon(train_val_data, test_data, symbols, output_path):
 if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
-    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'
+    # symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable'
     # load data
     Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 
@@ -201,8 +201,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.6, shuffle_test=True)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=True)
 
-        sr_rom_operon(train_val_data, test_data, symbols,
-                      output_path + new_folder + "/")
+        sr_rom_operon(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
