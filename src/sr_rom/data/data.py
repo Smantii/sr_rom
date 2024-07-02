@@ -56,9 +56,6 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
                     * (i+1)] = X[idx_train_val + 61*i]
         X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
 
-    y_train_val = tau[idx_train_val]
-    y_test = tau[idx_test]
-
     # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
         Re_train_val, idx_train_val, test_size=2/8, random_state=42, shuffle=True)
@@ -87,11 +84,11 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
                   'a_FOM': a_FOM_train, 'idx': idx_train}
     data_train_val = {'A': A_train_val, 'B': B_train_val,
                       'tau': tau_train_val, 'a_FOM': a_FOM_train_val,
-                      'idx': idx_train_val}
+                      'idx': idx_train_val, "X": X_train_val}
     data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
                 'a_FOM': a_FOM_val, 'idx': idx_val}
     data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
-                 'a_FOM': a_FOM_test, 'idx': idx_test}
+                 'a_FOM': a_FOM_test, 'idx': idx_test, "X": X_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
     train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
