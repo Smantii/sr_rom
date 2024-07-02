@@ -95,8 +95,8 @@ def sr_rom_operon(train_val_data, test_data, output_path):
     }
 
     # reshuffling
-    p_train = np.random.permutation(len(train_Re_norm))
-    p_test = np.random.permutation(len(test_Re_norm))
+    p_train = np.random.permutation(len(train_val_data.X))
+    p_test = np.random.permutation(len(test_data.X))
 
     print("Started training procedure for A", flush=True)
     # training procedure for A
@@ -116,14 +116,12 @@ def sr_rom_operon(train_val_data, test_data, output_path):
             test_Re_norm = (X_test - mean_std_train_Re[0])/mean_std_train_Re[1]
             test_comp_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-            
             train_Re_norm = train_Re_norm[p_train]
             train_comp_norm = train_comp_norm[p_train]
             test_Re_norm = test_Re_norm[p_test]
             test_comp_norm = test_comp_norm[p_test]
 
             reg = SymbolicRegressor(
-                generations=100,
                 optimizer_iterations=10,
                 n_threads=16,
                 epsilon=0,
@@ -160,14 +158,12 @@ def sr_rom_operon(train_val_data, test_data, output_path):
                 test_Re_norm = (X_test - np.mean(X_train_val))/np.std(X_train_val)
                 test_comp_norm = (y_test - np.mean(y_train_val))/np.std(y_train_val)
 
-
                 train_Re_norm = train_Re_norm[p_train]
                 train_comp_norm = train_comp_norm[p_train]
                 test_Re_norm = test_Re_norm[p_test]
                 test_comp_norm = test_comp_norm[p_test]
 
                 reg = SymbolicRegressor(
-                    generations=100,
                     optimizer_iterations=10,
                     n_threads=16,
                     epsilon=0,
