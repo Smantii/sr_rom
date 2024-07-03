@@ -104,7 +104,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, output_path):
             optimizer_iterations=10,
             n_threads=16,
             max_evaluations=int(1e6),
-            generations=1
+            generations=50
         )
 
         gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True,

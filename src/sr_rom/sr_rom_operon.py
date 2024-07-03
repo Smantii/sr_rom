@@ -116,10 +116,10 @@ def sr_rom_operon(train_val_data, test_data, output_path):
             test_Re_norm = (X_test - mean_std_train_Re[0])/mean_std_train_Re[1]
             test_comp_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-            train_Re_norm = train_Re_norm[p_train]
-            train_comp_norm = train_comp_norm[p_train]
-            test_Re_norm = test_Re_norm[p_test]
-            test_comp_norm = test_comp_norm[p_test]
+            # train_Re_norm = train_Re_norm[p_train]
+            # train_comp_norm = train_comp_norm[p_train]
+            # test_Re_norm = test_Re_norm[p_test]
+            # test_comp_norm = test_comp_norm[p_test]
 
             reg = SymbolicRegressor(
                 optimizer_iterations=10,
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=True)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=False)
 
         sr_rom_operon(train_val_data, test_data, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)

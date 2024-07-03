@@ -30,25 +30,26 @@ def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_p
     std_train_r_2 = np.std(train_r_2)
     mean_test_r_2 = np.mean(test_r_2)
     std_test_r_2 = np.std(test_r_2)
+
     # print(f"R^2 training: {mean_train_r_2} +/- {std_train_r_2}")
     # print(f"R^2 test: {mean_test_r_2} +/- {std_test_r_2}")
 
     print(idx_test)
-    print(err_l2_path)
 
-    err_l2 = np.loadtxt(err_l2_path, delimiter=",", skiprows=1)[idx_test, 1]
-    err_h10 = np.loadtxt(err_h10_path, delimiter=",", skiprows=1)[idx_test, 1]
+    # err_l2 = np.loadtxt(err_l2_path, delimiter=",", skiprows=1)[idx_test, 1]
+    # err_h10 = np.loadtxt(err_h10_path, delimiter=",", skiprows=1)[idx_test, 1]
 
-    print(err_l2)
+    # print(err_l2)
 
-    mean_test_l2 = np.mean(err_l2)
-    std_test_l2 = np.std(err_l2)
-    mean_test_h10 = np.mean(err_h10)
-    std_test_h10 = np.std(err_h10)
+    # mean_test_l2 = np.mean(err_l2)
+    # std_test_l2 = np.std(err_l2)
+    # mean_test_h10 = np.mean(err_h10)
+    # std_test_h10 = np.std(err_h10)
 
     results = [f"$ {round(mean_test_r_2,3)} \pm {round(std_test_r_2,3)}$",
-               f"$ {round(mean_test_l2,3)} \pm {round(std_test_l2,3)}$",
-               f"$ {round(mean_test_h10,3)} \pm {round(std_test_h10,3)}$"]
+               # f"$ {round(mean_test_l2,3)} \pm {round(std_test_l2,3)}$",
+               # f"$ {round(mean_test_h10,3)} \pm {round(std_test_h10,3)}$"
+               ]
 
     '''
     bins = np.linspace(-1, 1, 100)
@@ -114,14 +115,14 @@ def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_p
 
 if __name__ == "__main__":
     # load and process data
-    Re, A, B, tau, a_FOM = process_data(5, "2dcyl/Re200_300")
+    Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
     l2_scores = np.zeros((3, 5), dtype=object)
     h10_scores = np.zeros((3, 5), dtype=object)
 
-    path = os.path.join(dir_path, "nn_results/")
+    path = os.path.join(dir_path, "results_sr/")
     results_dir = np.sort([name for name in os.listdir(path)])
     # iterate over directory with different test size
     for j, res_test in enumerate(results_dir):
@@ -129,30 +130,31 @@ if __name__ == "__main__":
         w_dir = np.sort([name for name in os.listdir(
             res_path) if name.replace(".out", "") == name])
         _, _, _, test_data = split_data(
-            Re, A, B, tau, a_FOM, test_size=0.2 + 0.1*j)
+            Re, A, B, tau, a_FOM, X, test_size=0.2 + 0.1*j, shuffle_test=True)
         idx_test = test_data.y["idx"]
         #    # iterate over directory with different window size
         for i, res_w in enumerate(w_dir):
+            print(res_w)
             res_w_path = os.path.join(res_path, res_w)
             models = os.path.join(res_w_path, "models.txt")
             scores = os.path.join(res_w_path, "scores.txt")
-            err_l2_path = os.path.join(
-                res_w_path, "vmsrom_nn_l2_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
-            err_h10_path = os.path.join(
-                res_w_path, "vmsrom_nn_h10_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+            # err_l2_path = os.path.join(
+            #    res_w_path, "vmsrom_nn_l2_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+            # err_h10_path = os.path.join(
+            #    res_w_path, "vmsrom_nn_h10_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
 
             results = compute_statistics(
-                5, res_w_path, models, scores, idx_test, err_l2_path, err_h10_path)
+                5, res_w_path, models, scores, idx_test, 0, 0)
 
             r2_scores[i, j] = results[0]
-            l2_scores[i, j] = results[1]
-            h10_scores[i, j] = results[2]
+            # l2_scores[i, j] = results[1]
+            # h10_scores[i, j] = results[2]
 
     print(r2_scores)
     print("--------------------")
-    print(l2_scores)
-    print("--------------------")
-    print(h10_scores)
+    # print(l2_scores)
+    # print("--------------------")
+    # print(h10_scores)
     # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
     # print("Simplifying...")
     # print(trigsimp(tau[0, 0]))
