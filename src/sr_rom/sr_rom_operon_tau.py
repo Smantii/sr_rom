@@ -13,7 +13,7 @@ from matplotlib import cm
 warnings.filterwarnings("ignore")
 
 
-def save_results(reg, X, X_train_val, y_train_val, X_test, y_test,
+def save_results(reg, X, tau, X_train_val, y_train_val, X_test, y_test,
                  mean_std_train_Re, mean_std_train_comp, prb_name, ylabel, output_path, learning_time):
 
     train_val_score = reg.score(X_train_val, y_train_val)
@@ -26,15 +26,9 @@ def save_results(reg, X, X_train_val, y_train_val, X_test, y_test,
     num_re_train_val = int(len(X_train_val[:, 0])/num_t)
     num_re_test = int(len(X_test[:, 0])/num_t)
     num_re = num_re_train_val + num_re_test
-    idx_train_val = np.arange(num_re_train_val)
-    # NOTE: we test extrapolation, so test set is at the end of reynolds interval
-    idx_test = np.arange(num_re_train_val, num_re)
-    tau = np.zeros((num_re, num_t))
-    tau[idx_train_val] = y_train_val.reshape((num_re_train_val, num_t), order="F")
-    tau[idx_test] = y_test.reshape((num_re_test, num_t), order="F")
 
     # model prediction
-    X_scaled = (X - mean_std_train_Re[0])/mean_std_train_Re[1]
+    X_scaled = (X[:, 1:] - mean_std_train_Re[0])/mean_std_train_Re[1]
     model_out = reg.predict(X_scaled)
 
     # revert data scaling
@@ -74,41 +68,44 @@ def save_results(reg, X, X_train_val, y_train_val, X_test, y_test,
     print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
 
-def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
+def sr_rom_operon(train_val_data, test_data, X, tau, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
-
-    print("Started training procedure for tau", flush=True)
-    # training procedure for tau
-    for i in range(5):
-        idx_train = np.argsort(train_val_data.X[:, 0])
-        y_train = train_val_data.y[:, :, i].flatten("F")[idx_train]
-        y_test = test_data.y[:, :, i].flatten("F")
-
-        # Standardization
-        mean_std_X_train = [np.mean(train_val_data.X[idx_train, 1:], axis=0),
-                            np.std(train_val_data.X[idx_train, 1:], axis=0)]
-        mean_std_train_comp = [np.mean(y_train, axis=0),
-                               np.std(y_train, axis=0)]
-        X_train_norm = (train_val_data.X[idx_train, 1:] -
-                        mean_std_X_train[0])/mean_std_X_train[1]
-        y_train_norm = (y_train - mean_std_train_comp[0]) / \
-            mean_std_train_comp[1]
-        X_test_norm = (test_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
-        y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
-
-        reg = SymbolicRegressor(
-            allowed_symbols=symbols,
-            optimizer_iterations=10,
-            n_threads=16,
-            max_evaluations=int(1e6),
-            generations=50
-        )
 
         params = {
             'max_length': [20, 40, 60, 80, 100],
             'tournament_size': [2, 3],
+            'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable',
+                                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable',
+                                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable']
         }
+
+    print("Started training procedure for tau", flush=True)
+    # training procedure for tau
+    for i in range(5):
+        idx_train = np.argsort(train_val_data.y["X"][:, 0])
+        y_train = train_val_data.y["tau"][:, :, i].flatten("F")[idx_train]
+        y_test = test_data.y["tau"][:, :, i].flatten("F")
+
+        # Standardization
+        mean_std_X_train = [np.mean(train_val_data.y["X"][idx_train, 1:], axis=0),
+                            np.std(train_val_data.y["X"][idx_train, 1:], axis=0)]
+        mean_std_train_comp = [np.mean(y_train, axis=0),
+                               np.std(y_train, axis=0)]
+        X_train_norm = (train_val_data.y["X"][idx_train, 1:] -
+                        mean_std_X_train[0])/mean_std_X_train[1]
+        y_train_norm = (y_train - mean_std_train_comp[0]) / \
+            mean_std_train_comp[1]
+        X_test_norm = (test_data.y["X"][:, 1:] -
+                       mean_std_X_train[0])/mean_std_X_train[1]
+        y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
+
+        reg = SymbolicRegressor(
+            optimizer_iterations=10,
+            n_threads=16,
+            max_evaluations=int(1e6),
+            generations=1
+        )
 
         gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True,
                           n_jobs=-1, return_train_score=True)
@@ -116,7 +113,7 @@ def sr_rom_operon(train_val_data, test_data, X, symbols, output_path):
         gs.fit(X_train_norm, y_train_norm)
         toc = time.time()
 
-        save_results(gs.best_estimator_, X, X_train_norm, y_train_norm, X_test_norm, y_test_norm,
+        save_results(gs.best_estimator_, X, tau[:, :, i], X_train_norm, y_train_norm, X_test_norm, y_test_norm,
                      mean_std_X_train, mean_std_train_comp,
                      "tau_" + str(i), r"$\tau_i$", output_path, toc-tic)
 
@@ -135,9 +132,9 @@ if __name__ == "__main__":
         # process data
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
-        _, _, train_val_data, test_data, _ = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=True)
+        _, _, train_val_data, test_data = split_data(
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=False)
 
-        sr_rom_operon(train_val_data, test_data, X, symbols,
+        sr_rom_operon(train_val_data, test_data, X, tau_conv,
                       output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
