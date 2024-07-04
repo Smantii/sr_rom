@@ -51,7 +51,7 @@ print(device, flush=True)
 Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.2, shuffle_test=False)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
@@ -59,20 +59,20 @@ num_t = tau.shape[1]
 t = np.linspace(500, 520, 2001)
 
 for i in range(5):
-    idx_train = np.argsort(train_val_data.X[:, 0])
-    y_train = train_val_data.y[:, :, i].flatten("F")[idx_train]
-    y_test = test_data.y[:, :, i].flatten("F")
+    idx_train = np.argsort(train_val_data.y["X"][:, 0])
+    y_train = train_val_data.y["tau"][:, :, i].flatten("F")[idx_train]
+    y_test = test_data.y["tau"][:, :, i].flatten("F")
 
     # Standardization
-    mean_std_X_train = [np.mean(train_val_data.X[idx_train, 1:], axis=0),
-                        np.std(train_val_data.X[idx_train, 1:], axis=0)]
+    mean_std_X_train = [np.mean(train_val_data.y["X"][idx_train, 1:], axis=0),
+                        np.std(train_val_data.y["X"][idx_train, 1:], axis=0)]
     mean_std_train_comp = [np.mean(y_train, axis=0),
                            np.std(y_train, axis=0)]
-    X_train_norm = (train_val_data.X[idx_train, 1:] -
+    X_train_norm = (train_val_data.y["X"][idx_train, 1:] -
                     mean_std_X_train[0])/mean_std_X_train[1]
     y_train_norm = (y_train - mean_std_train_comp[0]) / \
         mean_std_train_comp[1]
-    X_test_norm = (test_data.X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+    X_test_norm = (test_data.y["X"][:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
     y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
     X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
@@ -122,7 +122,7 @@ for i in range(5):
         "projection": "3d"},  figsize=(20, 10))
 
     # Plot the surface.
-    surf = ax[0].plot_surface(re_mesh, t_mesh, tau[:, :, i].T, cmap=cm.coolwarm,
+    surf = ax[0].plot_surface(re_mesh, t_mesh, tau_conv[:, :, i].T, cmap=cm.coolwarm,
                               linewidth=0, antialiased=False)
     surf_comp = ax[1].plot_surface(re_mesh, t_mesh, pred.T, cmap=cm.coolwarm,
                                    linewidth=0, antialiased=False)
