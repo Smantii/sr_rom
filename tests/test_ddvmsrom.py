@@ -18,7 +18,7 @@ def test_ddvmsrom():
     iostep = int(nsteps / 2000)
     r = 5
 
-    sdir = "tests/data/ops"
+    sdir = "./tests/data/ops"
 
     R = find_snapshot_rank(sdir)
     print(f'Snapshot rank is: {R}')
