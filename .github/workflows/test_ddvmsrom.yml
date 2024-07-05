@@ -29,13 +29,8 @@ jobs:
 
     - name: Set PYTHONPATH
       run: |
-        echo "PYTHONPATH=$(pwd)/src" >> $GITHUB_ENV
-        echo $PYTHONPATH
-        echo $(pwd)
+        echo "PYTHONPATH=$(pwd)/" >> $GITHUB_ENV
 
     - name: Run tests
       run: |
-        export PYTHONPATH=$(pwd)/
-        echo "PYTHONPATH is set to: $PYTHONPATH"
-        ls $(pwd)/tests/data/ops/
         pytest tests/test_ddvmsrom.py
