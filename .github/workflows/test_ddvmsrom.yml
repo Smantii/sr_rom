@@ -37,4 +37,5 @@ jobs:
       run: |
         export PYTHONPATH=$(pwd)/
         echo "PYTHONPATH is set to: $PYTHONPATH"
+        ls $(pwd)/tests/data/ops/
         pytest tests/test_ddvmsrom.py
