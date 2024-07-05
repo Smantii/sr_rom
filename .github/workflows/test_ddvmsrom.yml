@@ -35,4 +35,6 @@ jobs:
 
     - name: Run tests
       run: |
+        export PYTHONPATH=$(pwd)/src
+        echo "PYTHONPATH is set to: $PYTHONPATH"
         pytest tests/test_ddvmsrom.py
