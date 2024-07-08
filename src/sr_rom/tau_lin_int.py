@@ -5,16 +5,28 @@ from sr_rom.data.data import process_data, smooth_data, split_data
 from scipy.interpolate import interp1d
 from sr_rom.code.two_scale_dd_vms_rom_closure import main
 import os
+import shutil
+
 
 # load data
 Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
+test_perc = 20
+
+
+dir = '/home/smanti/SR-ROM/src/sr_rom/results_interpolation'
+if os.path.exists(dir):
+    shutil.rmtree(dir)
+os.makedirs(dir)
 
 # split in training and test
-train_data, val_data, train_val_data, test_data, (train_Re_idx, test_Re_idx) = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.6, True)
+train_data, val_data, train_val_data, test_data = split_data(
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, test_perc/100, True)
+
+train_Re_idx = train_val_data.y["idx"]
+print(train_Re_idx)
 
 # linearly interpolate w.r.t. Reynolds and time
 tau_interp = np.zeros((61, 20001, 5))*np.nan
@@ -25,9 +37,12 @@ for i in range(5):
     tau_conv_interp_t = interp1d(t, tau_Re, axis=1, fill_value="extrapolate")
     tau_interp[:, :, i] = tau_conv_interp_t(t_full)
 
-test_Re = Re[test_Re_idx]
-l2_error = []
+np.save("tau_interp" + str(test_perc) + ".npy", tau_interp)
+# test_Re = Re[test_Re_idx]
+# l2_error = []
 
+
+assert False
 # load DD VMS-ROM csv file
 true_l2_error = np.loadtxt(
     "/home/smanti/SR-ROM/src/sr_rom/results_20/results_w_3_n_2/vmsrom_l2_error.csv", delimiter=",", skiprows=1)
