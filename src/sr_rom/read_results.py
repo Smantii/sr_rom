@@ -78,6 +78,8 @@ def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_p
 
     return results
 
+
+def simplify(simplify_models, A_model_flatten, B_model_flatten, r):
     if simplify_models:
         open('simplified_models.txt', 'w').close()
         # simplify expressions
@@ -113,45 +115,76 @@ def compute_statistics(r, path, models, scores, idx_test, err_l2_path, err_h10_p
     print("Done!")
 
 
+def plot_errors(Re, idx_tests, l2_error, dd_vms_rom_error):
+    fig, axis = plt.subplots(nrows=4, ncols=1, figsize=(6.5, 8))
+    for i, idx_test in enumerate(idx_tests):
+        axis[i].plot(Re, dd_vms_rom_error, c="#e41a1c",
+                     marker='o', label="DD VMS-ROM", ms=2.5)
+        axis[i].plot(Re, l2_error[:, i, 0], c='#377eb8',
+                     marker='o', label="VMS-ROM interp", ms=2.5)
+        axis[i].scatter(Re[idx_test], 0.*np.ones_like(Re[idx_test]),
+                        marker=".", c="#e41a1c", clip_on=False)
+        axis[i].set_ylim(bottom=0)
+        axis[i].grid(True)
+        axis[i].set_xlabel("Re")
+        axis[i].set_ylabel(r"$\epsilon_{L^2}$")
+        # axis[i].legend()
+        handles, labels = axis[i].get_legend_handles_labels()
+
+    fig.legend(handles, labels, loc='upper center')
+    plt.show()
+
+
 if __name__ == "__main__":
     # load and process data
     Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
-    l2_scores = np.zeros((3, 5), dtype=object)
-    h10_scores = np.zeros((3, 5), dtype=object)
+    l2_error = np.zeros((61, 4, 3), dtype=np.float64)
 
-    path = os.path.join(dir_path, "results_sr/")
+    path = os.path.join(dir_path, "results_interpolation/li_tau")
+    dd_vms_rom_error = np.loadtxt(
+        dir_path + "/results_interpolation/vmsrom_l2_error.csv", delimiter=",", skiprows=1)[:, 1]
     results_dir = np.sort([name for name in os.listdir(path)])
+    idx_tests = []
     # iterate over directory with different test size
     for j, res_test in enumerate(results_dir):
         res_path = os.path.join(path, res_test)
         w_dir = np.sort([name for name in os.listdir(
             res_path) if name.replace(".out", "") == name])
         _, _, _, test_data = split_data(
-            Re, A, B, tau, a_FOM, X, test_size=0.2 + 0.1*j, shuffle_test=True)
+            Re, A, B, tau, a_FOM, X, test_size=0.2 + 0.2*j, shuffle_test=True)
         idx_test = test_data.y["idx"]
+        idx_tests.append(idx_test)
         #    # iterate over directory with different window size
         for i, res_w in enumerate(w_dir):
-            print(res_w)
             res_w_path = os.path.join(res_path, res_w)
-            models = os.path.join(res_w_path, "models.txt")
-            scores = os.path.join(res_w_path, "scores.txt")
-            # err_l2_path = os.path.join(
-            #    res_w_path, "vmsrom_nn_l2_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
-            # err_h10_path = os.path.join(
-            #    res_w_path, "vmsrom_nn_h10_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+            # print(res_w_path)
+            # print(np.load(res_w_path + "/l2_error.npy"))
+            l2_error[:, j, i] = np.load(res_w_path + "/l2_error.npy")
 
-            results = compute_statistics(
-                5, res_w_path, models, scores, idx_test, 0, 0)
+    plot_errors(Re, idx_tests, l2_error, dd_vms_rom_error)
+    # l2_rel_error[:, j, i] = np.load(res_w_path + "l2_rel_error.npy")
 
-            r2_scores[i, j] = results[0]
-            # l2_scores[i, j] = results[1]
-            # h10_scores[i, j] = results[2]
+    # l2_error = np.load()
 
-    print(r2_scores)
-    print("--------------------")
+    # models = os.path.join(res_w_path, "models.txt")
+    # scores = os.path.join(res_w_path, "scores.txt")
+    # err_l2_path = os.path.join(
+    #    res_w_path, "vmsrom_nn_l2_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+    # err_h10_path = os.path.join(
+    #    res_w_path, "vmsrom_nn_h10_error_w" + str(3 + 2*i) + "_tp" + str(20 + 10*j) + ".csv")
+
+    # results = compute_statistics(
+    #    5, res_w_path, models, scores, idx_test, 0, 0)
+
+    # r2_scores[i, j] = results[0]
+    # l2_scores[i, j] = results[1]
+    # h10_scores[i, j] = results[2]
+
+    # print(r2_scores)
+    # print("--------------------")
     # print(l2_scores)
     # print("--------------------")
     # print(h10_scores)
