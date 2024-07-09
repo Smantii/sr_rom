@@ -120,7 +120,7 @@ def plot_errors(Re, idx_tests, l2_error, dd_vms_rom_error):
     for i, idx_test in enumerate(idx_tests):
         axis[i].plot(Re, dd_vms_rom_error, c="#e41a1c",
                      marker='o', label="DD VMS-ROM", ms=2.5)
-        axis[i].plot(Re, l2_error[:, i, 0], c='#377eb8',
+        axis[i].plot(Re, l2_error[:, i, 1], c='#377eb8',
                      marker='o', label="VMS-ROM interp", ms=2.5)
         axis[i].scatter(Re[idx_test], 0.*np.ones_like(Re[idx_test]),
                         marker=".", c="#e41a1c", clip_on=False)
