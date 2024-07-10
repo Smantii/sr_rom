@@ -115,24 +115,32 @@ def simplify(simplify_models, A_model_flatten, B_model_flatten, r):
     print("Done!")
 
 
-def plot_errors(Re, idx_tests, l2_error, dd_vms_rom_error):
+def plot_errors(Re, idx_tests, l2_error_tau, l2_error_A_B, dd_vms_rom_error):
     fig, axis = plt.subplots(nrows=4, ncols=1, figsize=(6.5, 8))
+    letters = ["A", "B", "C", "D"]
+    fontsize = 10
+    plt.rcParams['font.size'] = fontsize
     for i, idx_test in enumerate(idx_tests):
         axis[i].plot(Re, dd_vms_rom_error, c="#e41a1c",
-                     marker='o', label="DD VMS-ROM", ms=2.5)
-        axis[i].plot(Re, l2_error[:, i, 1], c='#377eb8',
-                     marker='o', label="VMS-ROM interp", ms=2.5)
+                     marker='o', label="DD VMS-ROM", ms=2.5, clip_on=False)
+        axis[i].plot(Re, l2_error_tau[:, i, 2], c='#377eb8',
+                     marker='o', label="VMS-ROM interp", ms=2.5, clip_on=False)
+        axis[i].plot(Re, l2_error_A_B[:, i, 2], c='#4daf4a',
+                     marker='o', label=r"$\tilde{A}, \tilde{B}$ interp", ms=2.5)
         axis[i].scatter(Re[idx_test], 0.*np.ones_like(Re[idx_test]),
                         marker=".", c="#e41a1c", clip_on=False)
+        axis[i].text(-0.15, 1, letters[i], transform=axis[i].transAxes, weight="bold")
         axis[i].set_ylim(bottom=0)
         axis[i].grid(True)
         axis[i].set_xlabel("Re")
         axis[i].set_ylabel(r"$\epsilon_{L^2}$")
-        # axis[i].legend()
+        axis[i].set_xticks([200, 220, 240, 260, 280, 300])
+        axis[i].set_xlim(200, 300)
         handles, labels = axis[i].get_legend_handles_labels()
 
-    fig.legend(handles, labels, loc='upper center')
-    plt.show()
+    fig.legend(handles, labels, loc='upper center', ncol=3)
+    # plt.show()
+    plt.savefig("lin_int_plot_w_7_n_2.pdf", dpi=300)
 
 
 if __name__ == "__main__":
@@ -141,30 +149,39 @@ if __name__ == "__main__":
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
-    l2_error = np.zeros((61, 4, 3), dtype=np.float64)
+    l2_error_tau = np.zeros((61, 4, 3), dtype=np.float64)
+    l2_error_A_B = np.zeros((61, 4, 3), dtype=np.float64)
 
-    path = os.path.join(dir_path, "results_interpolation/li_tau")
+    li_tau_path = os.path.join(dir_path, "results_interpolation/li_tau")
+    li_A_B_path = os.path.join(dir_path, "results_interpolation/li_A_B")
     dd_vms_rom_error = np.loadtxt(
         dir_path + "/results_interpolation/vmsrom_l2_error.csv", delimiter=",", skiprows=1)[:, 1]
-    results_dir = np.sort([name for name in os.listdir(path)])
+    results_dir = np.sort([name for name in os.listdir(li_tau_path)])
     idx_tests = []
     # iterate over directory with different test size
     for j, res_test in enumerate(results_dir):
-        res_path = os.path.join(path, res_test)
+        res_path_li_tau = os.path.join(li_tau_path, res_test)
+        res_path_li_A_B = os.path.join(li_A_B_path, res_test)
         w_dir = np.sort([name for name in os.listdir(
-            res_path) if name.replace(".out", "") == name])
+            res_path_li_tau) if name.replace(".out", "") == name])
         _, _, _, test_data = split_data(
             Re, A, B, tau, a_FOM, X, test_size=0.2 + 0.2*j, shuffle_test=True)
         idx_test = test_data.y["idx"]
         idx_tests.append(idx_test)
         #    # iterate over directory with different window size
         for i, res_w in enumerate(w_dir):
-            res_w_path = os.path.join(res_path, res_w)
-            # print(res_w_path)
-            # print(np.load(res_w_path + "/l2_error.npy"))
-            l2_error[:, j, i] = np.load(res_w_path + "/l2_error.npy")
+            res_w_path_tau = os.path.join(res_path_li_tau, res_w)
+            res_w_path_A_B = os.path.join(res_path_li_A_B, res_w)
+            l2_error_tau[:, j, i] = np.load(res_w_path_tau + "/l2_error.npy")
+            l2_error_A_B[:, j, i] = np.load(res_w_path_A_B + "/l2_error.npy")
 
-    plot_errors(Re, idx_tests, l2_error, dd_vms_rom_error)
+    # plot_errors(Re, idx_tests, l2_error_tau, l2_error_A_B, dd_vms_rom_error)
+
+    for i, idx_test in enumerate(idx_tests):
+        #    print(np.mean(dd_vms_rom_error[idx_test]), np.std(dd_vms_rom_error[idx_test]))
+        print(np.mean(l2_error_A_B[idx_test, i], axis=0),
+              np.std(l2_error_A_B[idx_test, i], axis=0))
+
     # l2_rel_error[:, j, i] = np.load(res_w_path + "l2_rel_error.npy")
 
     # l2_error = np.load()
