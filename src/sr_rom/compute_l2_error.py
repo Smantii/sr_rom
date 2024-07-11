@@ -32,7 +32,7 @@ task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 
 for test_perc in test_perc_list:
     for w in windows:
-        print(f"Collecting results for {test_perc}% test and window {w}")
+        print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
         Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
@@ -77,10 +77,10 @@ for test_perc in test_perc_list:
         l2_error = []
         l2_rel_error = []
         for idx, Re in enumerate(Re):
-            print(Re)
+            print(Re, flush=True)
             _, _, _, _, sq_avgerr_L2, sq_avgrelerr_L2 = main(
                 int(Re), method, dir, idx, False)
-            print(sq_avgerr_L2, sq_avgrelerr_L2)
+            print(sq_avgerr_L2, sq_avgrelerr_L2, flush=True)
             l2_error.append(sq_avgerr_L2)
             l2_rel_error.append(sq_avgrelerr_L2)
 
