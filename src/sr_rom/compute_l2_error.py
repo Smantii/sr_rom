@@ -24,9 +24,9 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [80]
+test_perc_list = [20, 40, 60, 80]
 windows = [3, 5, 7]
-method = "SR"
+method = "NN"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 
