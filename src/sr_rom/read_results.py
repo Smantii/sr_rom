@@ -177,10 +177,24 @@ if __name__ == "__main__":
 
     # plot_errors(Re, idx_tests, l2_error_tau, l2_error_A_B, dd_vms_rom_error)
 
+    mean_dd_vms_rom_error = np.mean(dd_vms_rom_error)
+    print(np.mean(dd_vms_rom_error), np.std(dd_vms_rom_error))
     for i, idx_test in enumerate(idx_tests):
+        print(f"------------Tau results-------------")
+        mean_tau_error = np.mean(l2_error_tau[:, i], axis=0)
+        std_tau_error = np.std(l2_error_tau[:, i], axis=0)
+        print(mean_tau_error, std_tau_error)
+        print((mean_tau_error - mean_dd_vms_rom_error)/mean_dd_vms_rom_error * 100)
+        print("--------------------------------------")
+        print(f"------------A e B tilde results-------------")
+        mean_A_B_error = np.mean(l2_error_A_B[:, i], axis=0)
+        std_A_B_error = np.std(l2_error_A_B[:, i], axis=0)
+        print(mean_A_B_error, std_A_B_error)
+        print((mean_A_B_error - mean_dd_vms_rom_error)/mean_dd_vms_rom_error * 100)
+        print("--------------------------------------")
         #    print(np.mean(dd_vms_rom_error[idx_test]), np.std(dd_vms_rom_error[idx_test]))
-        print(np.mean(l2_error_A_B[idx_test, i], axis=0),
-              np.std(l2_error_A_B[idx_test, i], axis=0))
+        # print(np.mean(l2_error_A_B[idx_test, i], axis=0),
+        #      np.std(l2_error_A_B[idx_test, i], axis=0))
 
     # l2_rel_error[:, j, i] = np.load(res_w_path + "l2_rel_error.npy")
 
