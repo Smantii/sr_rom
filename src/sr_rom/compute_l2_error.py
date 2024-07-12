@@ -6,6 +6,8 @@ from scipy.interpolate import interp1d
 from sr_rom.code.two_scale_dd_vms_rom_closure import main
 import os
 import shutil
+from ray.util.multiprocessing import Pool
+from functools import partial
 
 
 def get_dir(task, folder_name, w, test_perc):
@@ -17,6 +19,14 @@ def get_dir(task, folder_name, w, test_perc):
     #    shutil.rmtree(dir)
     # os.makedirs(dir)
     return dir
+
+
+def f(idx_Re, l2_error, l2_rel_error):
+    _, _, _, _, sq_avgerr_L2, sq_avgrelerr_L2 = main(
+        int(Re[idx_Re]), method, dir, idx_Re, False)
+    l2_error[idx_Re] = sq_avgerr_L2
+    l2_rel_error[idx_Re] = sq_avgerr_L2
+    return sq_avgerr_L2, sq_avgrelerr_L2
 
 
 # load data
@@ -74,15 +84,11 @@ for test_perc in test_perc_list:
             np.save(dir + "mean_std_X_train.npy", mean_std_X_train)
             np.save(dir + "mean_std_train_comp_" + str(i) + ".npy", mean_std_train_comp)
 
-        l2_error = []
-        l2_rel_error = []
-        for idx, Re in enumerate(Re):
-            print(Re, flush=True)
-            _, _, _, _, sq_avgerr_L2, sq_avgrelerr_L2 = main(
-                int(Re), method, dir, idx, False)
-            print(sq_avgerr_L2, sq_avgrelerr_L2, flush=True)
-            l2_error.append(sq_avgerr_L2)
-            l2_rel_error.append(sq_avgrelerr_L2)
+        l2_error = [None]*len(Re)
+        l2_rel_error = [None]*len(Re)
+        pool = Pool(32)
+        for result in pool.map(partial(f, l2_error=l2_error, l2_rel_error=l2_rel_error), range(len(Re))):
+            print(result)
 
         np.save(dir + "l2_error.npy", l2_error)
         np.save(dir + "l2_rel_error.npy", l2_rel_error)
