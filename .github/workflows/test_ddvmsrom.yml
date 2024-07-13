@@ -32,7 +32,6 @@ jobs:
       run: pip install gdown
 
     - name: Install unzip
-      if: runner.os == 'Linux'
       run: |
         sudo apt-get install -y unzip
 	unzip Re200.zip
