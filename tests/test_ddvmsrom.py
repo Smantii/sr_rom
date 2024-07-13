@@ -34,7 +34,7 @@ def test_ddvmsrom():
     # Coefficients of the projected snapshots onto mb dimensional space
     uk, ns = load_coefficients_training_data(sdir, mb)
 
-    path_to_model = "src/sr_rom/results_extrapolation/sr/results_20/results_w_3_n_2/"
+    path_to_model = "./test/data/results_w_3_n_2/"
 
     # idx_Re is not needed in this case
     idx_Re = None
@@ -44,8 +44,7 @@ def test_ddvmsrom():
     ufinal = ucoef[-1, :]
 
     # Expected values to compare with ufinal
-    expected_values = np.array([1.000000000000000e+00, 6.648509519624800e+00, -1.491776533618715e-01, -
-                               1.730509015385063e-01, 1.069563447406831e-01, 2.867211912376920e-01])
+    expected_values = np.array([1.000000000000000e+00, 6.649945007946781e+00,  -9.143727275280920e-02,  -2.547955829231180e-01, 6.890082050178152e-02, 2.862299245236624e-01])
 
     # Compare ufinal with expected values within a tolerance
     np.testing.assert_almost_equal(ufinal, expected_values, decimal=10)
