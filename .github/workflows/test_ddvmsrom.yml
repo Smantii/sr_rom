@@ -28,10 +28,18 @@ jobs:
         pip install torch skorch numpy pandas
         pip install -e .
 
+    - name: Install gdown
+      run: pip install gdown
+
+    - name: Install unzip
+      if: runner.os == 'Linux'
+      run: sudo apt-get install -y unzip
+
     - name: Set PYTHONPATH
       run: |
         echo "PYTHONPATH=$(pwd)/" >> $GITHUB_ENV
 
     - name: Run tests
       run: |
+	unzip Re200.zip
         pytest tests/test_ddvmsrom.py

@@ -18,7 +18,7 @@ def test_ddvmsrom():
     iostep = int(nsteps / 2000)
     r = 5
 
-    sdir = "./tests/data/ops"
+    sdir = "./Re200/T20/ops"
 
     a0_full, b0_full, cu_full, mb = load_rom_ops(sdir)
 
