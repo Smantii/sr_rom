@@ -29,7 +29,9 @@ jobs:
         pip install -e .
 
     - name: Install gdown
-      run: pip install gdown
+      run: |
+      pip install gdown
+      gdown https://drive.google.com/uc?id=1-5ryuIACyWtOzSl3y0y0SYKBqIGofrO3
 
     - name: Install unzip
       run: |
