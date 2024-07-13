@@ -34,7 +34,7 @@ def test_ddvmsrom():
     # Coefficients of the projected snapshots onto mb dimensional space
     uk, ns = load_coefficients_training_data(sdir, mb)
 
-    path_to_model = "./test/data/results_w_3_n_2/"
+    path_to_model = "./tests/data/results_w_3_n_2/"
 
     # idx_Re is not needed in this case
     idx_Re = None
