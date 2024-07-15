@@ -21,12 +21,10 @@ def get_dir(task, folder_name, w, test_perc):
     return dir
 
 
-def f(idx_Re, l2_error, l2_rel_error):
+def f(idx_Re):
     _, _, _, _, sq_avgerr_L2, sq_avgrelerr_L2 = main(
         int(Re[idx_Re]), method, dir, idx_Re, False)
-    l2_error[idx_Re] = sq_avgerr_L2
-    l2_rel_error[idx_Re] = sq_avgerr_L2
-    return sq_avgerr_L2, sq_avgrelerr_L2
+    return idx_Re, sq_avgerr_L2, sq_avgrelerr_L2
 
 
 # load data
@@ -84,13 +82,16 @@ for test_perc in test_perc_list:
             np.save(dir + "mean_std_X_train.npy", mean_std_X_train)
             np.save(dir + "mean_std_train_comp_" + str(i) + ".npy", mean_std_train_comp)
 
-        l2_error = [None]*len(Re)
-        l2_rel_error = [None]*len(Re)
-        pool = Pool(32)
-        for result in pool.map(partial(f, l2_error=l2_error, l2_rel_error=l2_rel_error), range(len(Re))):
+        l2_error = np.zeros(len(Re))
+        l2_rel_error = np.zeros(len(Re))
+
+        pool = Pool(2)
+        for result in pool.map(f, range(2)):
+            l2_error[result[0]] = result[1]
+            l2_rel_error[result[0]] = result[2]
             print(result)
 
         np.save(dir + "l2_error.npy", l2_error)
         np.save(dir + "l2_rel_error.npy", l2_rel_error)
 
-        print("Done!")
+    print("Done!")
