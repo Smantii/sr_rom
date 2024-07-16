@@ -32,7 +32,7 @@ def generate_toy_data(r):
     return k_list, A_B_list
 
 
-def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
+def split_data(Re, A, B, tau, a_FOM, X, X_sampled, test_size=0.2, shuffle_test=False):
     num_data = len(Re)
     # num_test = round(test_size*num_data)
     # half_num_test = int(num_test/2)
@@ -49,12 +49,21 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
         Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=shuffle_test)
 
+    num_t_points_sampled = int(X_sampled.shape[0]/61)
+
     X_train_val = np.zeros((len(Re_train_val)*2001, 6))
     X_test = np.zeros((len(Re_test)*2001, 6))
+    X_train_val_sampled = np.zeros((len(Re_train_val)*num_t_points_sampled, 6))
+    # fill X_train_val and X_test
     for i in range(2001):
         X_train_val[len(Re_train_val)*i:len(Re_train_val)
                     * (i+1)] = X[idx_train_val + 61*i]
         X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
+
+    # fill X_train_val_sampled
+    for i in range(num_t_points_sampled):
+        X_train_val_sampled[len(Re_train_val)*i:len(Re_train_val)
+                            * (i+1)] = X_sampled[idx_train_val + 61*i]
 
     # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
@@ -84,7 +93,7 @@ def split_data(Re, A, B, tau, a_FOM, X, test_size=0.2, shuffle_test=False):
                   'a_FOM': a_FOM_train, 'idx': idx_train}
     data_train_val = {'A': A_train_val, 'B': B_train_val,
                       'tau': tau_train_val, 'a_FOM': a_FOM_train_val,
-                      'idx': idx_train_val, "X": X_train_val}
+                      'idx': idx_train_val, "X": X_train_val, "X_sampled": X_train_val_sampled}
     data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
                 'a_FOM': a_FOM_val, 'idx': idx_val}
     data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
@@ -132,15 +141,22 @@ def process_data(r: int, bench_name: str):
         tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
 
-    Re_grid, t_grid = np.meshgrid(Re, t)
+    num_t_data_points = 500
 
-    # fill matrix of data
+    Re_grid, _ = np.meshgrid(Re, t)
+    Re_sampled_grid, _ = np.meshgrid(Re, t[:num_t_data_points])
+
+    # fill matrices of data, both in the case of all and sampled times
     X = np.zeros((num_Re*num_t, r+1))
+    X_sampled = np.zeros((num_Re*num_t_data_points, r+1))
     X[:, 0] = Re_grid.flatten()
+    X_sampled[:, 0] = Re_sampled_grid.flatten()
     for i in range(5):
         X[:, i+1] = a_FOM[:, :, i].flatten('F')
+        # in this case only a portion of time steps is considered
+        X_sampled[:, i+1] = a_FOM[:, :num_t_data_points, i].flatten('F')
 
-    return Re, A, B, tau, a_FOM, X
+    return Re, A, B, tau, a_FOM, X, X_sampled
 
 
 def smooth_data(A, B, tau, w, num_smoothing, r):

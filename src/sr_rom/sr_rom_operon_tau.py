@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import sys
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RepeatedKFold
 import time
 import warnings
 from matplotlib import cm
@@ -68,33 +68,40 @@ def save_results(reg, X, tau, X_train_val, y_train_val, X_test, y_test,
     print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
 
-def sr_rom_operon(train_val_data, test_data, X, tau, output_path):
+def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
         params = {
             'max_length': [20, 40, 60, 80, 100],
-            'tournament_size': [2, 3],
-            'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable',
-                                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable',
-                                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable']
+            # 'tournament_size': [2, 3],
+            'allowed_symbols': [  # 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable',
+                # 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable',
+                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
+            'generations': [10, 20, 30, 40, 50]
         }
 
     print("Started training procedure for tau", flush=True)
+    cv = RepeatedKFold(n_splits=5, n_repeats=2)
     # training procedure for tau
     for i in range(5):
-        idx_train = np.argsort(train_val_data.y["X"][:, 0])
-        y_train = train_val_data.y["tau"][:, :, i].flatten("F")[idx_train]
+        num_t_points = int(X_sampled.shape[0]/61)
+        y_train = train_val_data.y["tau"][:, :, i].flatten("F")
+        y_train_sampled = train_val_data.y["tau"][:, :num_t_points, i].flatten("F")
         y_test = test_data.y["tau"][:, :, i].flatten("F")
 
         # Standardization
-        mean_std_X_train = [np.mean(train_val_data.y["X"][idx_train, 1:], axis=0),
-                            np.std(train_val_data.y["X"][idx_train, 1:], axis=0)]
+        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
+                            np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
         mean_std_train_comp = [np.mean(y_train, axis=0),
                                np.std(y_train, axis=0)]
-        X_train_norm = (train_val_data.y["X"][idx_train, 1:] -
+        X_train_norm = (train_val_data.y["X"][:, 1:] -
                         mean_std_X_train[0])/mean_std_X_train[1]
+        X_sampled_train_norm = (
+            train_val_data.y["X_sampled"][:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
         y_train_norm = (y_train - mean_std_train_comp[0]) / \
+            mean_std_train_comp[1]
+        y_sampled_train_norm = (y_train_sampled - mean_std_train_comp[0]) / \
             mean_std_train_comp[1]
         X_test_norm = (test_data.y["X"][:, 1:] -
                        mean_std_X_train[0])/mean_std_X_train[1]
@@ -104,13 +111,13 @@ def sr_rom_operon(train_val_data, test_data, X, tau, output_path):
             optimizer_iterations=10,
             n_threads=16,
             max_evaluations=int(1e6),
-            generations=50
+            tournament_size=3
         )
 
-        gs = GridSearchCV(reg, params, cv=3, verbose=3, refit=True,
+        gs = GridSearchCV(reg, params, cv=cv, verbose=3, refit=True,
                           n_jobs=-1, return_train_score=True)
         tic = time.time()
-        gs.fit(X_train_norm, y_train_norm)
+        gs.fit(X_sampled_train_norm, y_sampled_train_norm)
         toc = time.time()
 
         save_results(gs.best_estimator_, X, tau[:, :, i], X_train_norm, y_train_norm, X_test_norm, y_test_norm,
@@ -121,20 +128,19 @@ def sr_rom_operon(train_val_data, test_data, X, tau, output_path):
 if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
-    symbols = 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'
     # load data
-    Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
+    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300")
 
     for w in windows:
         print(f"---Collecting results for window size {w}...!---", flush=True)
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # process data
-        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
+        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 
-        _, _, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_size=0.2, shuffle_test=False)
+        train_data, val_data, train_val_data, test_data = split_data(
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_size=0.6, shuffle_test=False)
 
-        sr_rom_operon(train_val_data, test_data, X, tau_conv,
-                      output_path + new_folder + "/")
+        sr_rom_operon(train_val_data, test_data, X, X_sampled,
+                      tau_conv, output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
