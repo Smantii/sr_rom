@@ -73,21 +73,25 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
         params = {
-            'max_length': [20, 40, 60, 80, 100],
-            # 'tournament_size': [2, 3],
-            'allowed_symbols': [  # 'add,sub,mul,sin,cos,sqrt,square,acos,asin,constant,variable',
-                # 'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,constant,variable',
-                'add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
-            'generations': [10, 20, 30, 40, 50]
+            'optimizer_iterations': [10],
+            'n_threads': [16],
+            'max_evaluations': [int(1e6)],
+            'tournament_size': [3],
+            'max_length': [20, 40, 60, 80],
+            'generations': [10, 20, 30],
+            'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
+
         }
 
     print("Started training procedure for tau", flush=True)
-    cv = RepeatedKFold(n_splits=5, n_repeats=2)
+    idx_train_sampled = np.argsort(train_val_data.y["X_sampled"][:, 0])
+    num_trials = 10
     # training procedure for tau
     for i in range(5):
         num_t_points = int(X_sampled.shape[0]/61)
         y_train = train_val_data.y["tau"][:, :, i].flatten("F")
-        y_train_sampled = train_val_data.y["tau"][:, :num_t_points, i].flatten("F")
+        y_train_sampled = train_val_data.y["tau"][:, :num_t_points, i].flatten("F")[
+            idx_train_sampled]
         y_test = test_data.y["tau"][:, :, i].flatten("F")
 
         # Standardization
@@ -98,7 +102,7 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
         X_train_norm = (train_val_data.y["X"][:, 1:] -
                         mean_std_X_train[0])/mean_std_X_train[1]
         X_sampled_train_norm = (
-            train_val_data.y["X_sampled"][:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+            train_val_data.y["X_sampled"][idx_train_sampled, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
         y_train_norm = (y_train - mean_std_train_comp[0]) / \
             mean_std_train_comp[1]
         y_sampled_train_norm = (y_train_sampled - mean_std_train_comp[0]) / \
@@ -107,20 +111,32 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
                        mean_std_X_train[0])/mean_std_X_train[1]
         y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 
-        reg = SymbolicRegressor(
-            optimizer_iterations=10,
-            n_threads=16,
-            max_evaluations=int(1e6),
-            tournament_size=3
-        )
-
-        gs = GridSearchCV(reg, params, cv=cv, verbose=3, refit=True,
-                          n_jobs=-1, return_train_score=True)
+        gs = GridSearchCV(SymbolicRegressor(), params, cv=5, verbose=0, refit=False,
+                          n_jobs=-1, return_train_score=False)
+        params_results = {}
         tic = time.time()
-        gs.fit(X_sampled_train_norm, y_sampled_train_norm)
+        for trial in range(num_trials):
+            print(f"GS number {trial}")
+            gs.fit(X_sampled_train_norm, y_sampled_train_norm)
+            if trial == 0:
+                params_results["params"] = gs.cv_results_["params"]
+                # init mean test scores
+                params_results["mean_test_score"] = np.zeros(
+                    len(params_results["params"]))
+
+            # update mean test scores
+            params_results["mean_test_score"] += 1 / \
+                num_trials*gs.cv_results_["mean_test_score"]
+
+        # refit the model with best hyperparams in the entire dataset
+        print(params_results["mean_test_score"])
+        best_params_idx = np.argmax(params_results["mean_test_score"])
+        best_params = params_results["params"][best_params_idx]
+        reg = SymbolicRegressor(**best_params)
+        reg.fit(X_sampled_train_norm, y_sampled_train_norm)
         toc = time.time()
 
-        save_results(gs.best_estimator_, X, tau[:, :, i], X_train_norm, y_train_norm, X_test_norm, y_test_norm,
+        save_results(reg, X, tau[:, :, i], X_train_norm, y_train_norm, X_test_norm, y_test_norm,
                      mean_std_X_train, mean_std_train_comp,
                      "tau_" + str(i), r"$\tau_i$", output_path, toc-tic)
 
