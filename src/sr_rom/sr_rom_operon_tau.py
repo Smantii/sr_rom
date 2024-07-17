@@ -77,8 +77,8 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
             'n_threads': [16],
             'max_evaluations': [int(1e6)],
             'tournament_size': [3],
-            'max_length': [20, 40, 60, 80],
-            'generations': [10, 20, 30],
+            'max_length': [20, 60, 100, 140],
+            'generations': [10, 25, 50],
             'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
 
         }
@@ -130,8 +130,9 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
 
         # refit the model with best hyperparams in the entire dataset
         print(params_results["mean_test_score"])
-        best_params_idx = np.argmax(params_results["mean_test_score"])
+        best_params_idx = np.nanargmax(params_results["mean_test_score"])
         best_params = params_results["params"][best_params_idx]
+        print(best_params)
         reg = SymbolicRegressor(**best_params)
         reg.fit(X_sampled_train_norm, y_sampled_train_norm)
         toc = time.time()
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # process data
-        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
+        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         train_data, val_data, train_val_data, test_data = split_data(
             Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_size=0.6, shuffle_test=False)

@@ -41,12 +41,12 @@ task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 for test_perc in test_perc_list:
     for w in windows:
         print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
-        Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
+        Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300")
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, test_perc/100, True)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_perc/100, True)
 
         train_Re_idx = train_val_data.y["idx"]
 
@@ -85,13 +85,13 @@ for test_perc in test_perc_list:
         l2_error = np.zeros(len(Re))
         l2_rel_error = np.zeros(len(Re))
 
-        pool = Pool(2)
-        for result in pool.map(f, range(2)):
+        pool = Pool(32)
+        for result in pool.map(f, range(len(Re))):
             l2_error[result[0]] = result[1]
             l2_rel_error[result[0]] = result[2]
             print(result)
 
-        np.save(dir + "l2_error.npy", l2_error)
-        np.save(dir + "l2_rel_error.npy", l2_rel_error)
+        np.save(dir + "l2_error_0.npy", l2_error)
+        np.save(dir + "l2_rel_error_0.npy", l2_rel_error)
 
     print("Done!")
