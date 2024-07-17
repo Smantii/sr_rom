@@ -32,9 +32,9 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [20, 40, 60, 80]
-windows = [3, 5, 7]
-method = "NN"
+test_perc_list = [60]
+windows = [3]
+method = "LI"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 
@@ -46,7 +46,7 @@ for test_perc in test_perc_list:
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_perc/100, True)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_perc/100, shuffle)
 
         train_Re_idx = train_val_data.y["idx"]
 
@@ -91,7 +91,7 @@ for test_perc in test_perc_list:
             l2_rel_error[result[0]] = result[2]
             print(result)
 
-        np.save(dir + "l2_error_0.npy", l2_error)
-        np.save(dir + "l2_rel_error_0.npy", l2_rel_error)
+        np.save(dir + "l2_error.npy", l2_error)
+        np.save(dir + "l2_rel_error.npy", l2_rel_error)
 
     print("Done!")
