@@ -107,7 +107,7 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, test_size=0.2, shuffle_test=F
     return train_data, val_data, train_val_data, test_data
 
 
-def process_data(r: int, bench_name: str):
+def process_data(r: int, bench_name: str, t_sample: int):
     data_path = os.path.dirname(os.path.realpath(__file__))
     bench_path = os.path.join(data_path, bench_name)
 
@@ -141,20 +141,18 @@ def process_data(r: int, bench_name: str):
         tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
 
-    num_t_data_points = 500
-
     Re_grid, _ = np.meshgrid(Re, t)
-    Re_sampled_grid, _ = np.meshgrid(Re, t[:num_t_data_points])
+    Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
 
     # fill matrices of data, both in the case of all and sampled times
     X = np.zeros((num_Re*num_t, r+1))
-    X_sampled = np.zeros((num_Re*num_t_data_points, r+1))
+    X_sampled = np.zeros((num_Re*math.ceil(num_t/t_sample), r+1))
     X[:, 0] = Re_grid.flatten()
     X_sampled[:, 0] = Re_sampled_grid.flatten()
     for i in range(5):
         X[:, i+1] = a_FOM[:, :, i].flatten('F')
         # in this case only a portion of time steps is considered
-        X_sampled[:, i+1] = a_FOM[:, :num_t_data_points, i].flatten('F')
+        X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
 
     return Re, A, B, tau, a_FOM, X, X_sampled
 

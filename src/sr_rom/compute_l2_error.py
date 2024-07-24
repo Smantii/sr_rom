@@ -37,11 +37,13 @@ windows = [3]
 method = "LI"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
+t_sample = 200
+
+Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300", t_sample)
 
 for test_perc in test_perc_list:
     for w in windows:
         print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
-        Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300")
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         # split in training and test
@@ -57,10 +59,10 @@ for test_perc in test_perc_list:
             tau_interp = np.zeros((61, 20001, 5))*np.nan
             for i in range(5):
                 tau_conv_interp_Re = interp1d(
-                    Re[train_Re_idx], tau_conv[train_Re_idx, :, i], axis=0, fill_value="extrapolate")
+                    Re[train_Re_idx], tau_conv[train_Re_idx, ::t_sample, i], axis=0, fill_value="extrapolate")
                 tau_Re = tau_conv_interp_Re(Re)
                 tau_conv_interp_t = interp1d(
-                    t, tau_Re, axis=1, fill_value="extrapolate")
+                    t[::t_sample], tau_Re, axis=1, fill_value="extrapolate")
                 tau_interp[:, :, i] = tau_conv_interp_t(t_full)
             np.save(dir + "tau_interp.npy", tau_interp)
         elif method == "SR":
@@ -72,11 +74,11 @@ for test_perc in test_perc_list:
 
         # save mean and std of X and y
         for i in range(5):
-            y_train = train_val_data.y["tau"][:, :, i].flatten("F")
+            y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
 
             # Standardization
-            mean_std_X_train = [np.mean(train_val_data.y["X"][:, 1:], axis=0),
-                                np.std(train_val_data.y["X"][:, 1:], axis=0)]
+            mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
+                                np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
             mean_std_train_comp = [np.mean(y_train, axis=0),
                                    np.std(y_train, axis=0)]
             np.save(dir + "mean_std_X_train.npy", mean_std_X_train)

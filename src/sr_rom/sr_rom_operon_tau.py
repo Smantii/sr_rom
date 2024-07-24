@@ -68,7 +68,7 @@ def save_results(reg, X, tau, X_train_val, y_train_val, X_test, y_test,
     print(f"{prb_name} learned in {learning_time}s!", flush=True)
 
 
-def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
+def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
     with open(output_path + "scores.txt", "a") as text_file:
         text_file.write("Name" + " " + "R^2_train" + " " + "R^2_test\n")
 
@@ -88,9 +88,8 @@ def sr_rom_operon(train_val_data, test_data, X, X_sampled, tau, output_path):
     num_trials = 10
     # training procedure for tau
     for i in range(5):
-        num_t_points = int(X_sampled.shape[0]/61)
         y_train = train_val_data.y["tau"][:, :, i].flatten("F")
-        y_train_sampled = train_val_data.y["tau"][:, :num_t_points, i].flatten("F")[
+        y_train_sampled = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[
             idx_train_sampled]
         y_test = test_data.y["tau"][:, :, i].flatten("F")
 
@@ -146,7 +145,8 @@ if __name__ == "__main__":
     output_path = sys.argv[1]
     windows = [3, 5, 7]
     # load data
-    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300")
+    t_sample = 200
+    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300", t_sample)
 
     for w in windows:
         print(f"---Collecting results for window size {w}...!---", flush=True)
@@ -158,6 +158,6 @@ if __name__ == "__main__":
         train_data, val_data, train_val_data, test_data = split_data(
             Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_size=0.6, shuffle_test=False)
 
-        sr_rom_operon(train_val_data, test_data, X, X_sampled,
-                      tau_conv, output_path + new_folder + "/")
+        sr_rom_operon(train_val_data, test_data, X, tau_conv, t_sample,
+                      output_path + new_folder + "/")
         print(f"---Results for window size {w} completed!---", flush=True)
