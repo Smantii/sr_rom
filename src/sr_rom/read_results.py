@@ -123,12 +123,12 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, dd_vms_ro
     for i, idx_test in enumerate(idx_tests):
         axis[i].plot(Re, dd_vms_rom_error, c="#e41a1c",
                      marker='o', label="DD VMS-ROM", ms=2.5, clip_on=False)
-        axis[i].plot(Re, l2_error_tau[:, i, 2], c='#377eb8',
+        axis[i].plot(Re, l2_error_tau[:, i, 0], c='#377eb8',
                      marker='o', label="VMS-ROM interp", ms=2.5, clip_on=False)
-        axis[i].plot(Re, l2_error_nn[:, i, 2], c='#4daf4a',
+        axis[i].plot(Re, l2_error_nn[:, i, 0], c='#4daf4a',
                      marker='o', label="NN-ROM", ms=2.5)
-        # axis[i].plot(Re, l2_error_sr[:, i, 0], c='#984ea3',
-        #             marker='o', label="SR-ROM", ms=2.5)
+        axis[i].plot(Re, l2_error_sr[:, i, 0], c='#984ea3',
+                     marker='o', label="SR-ROM", ms=2.5)
         axis[i].scatter(Re[idx_test], 0.*np.ones_like(Re[idx_test]),
                         marker=".", c="#e41a1c", clip_on=False)
         axis[i].text(-0.15, 1, letters[i], transform=axis[i].transAxes, weight="bold")
@@ -142,12 +142,13 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, dd_vms_ro
 
     fig.legend(handles, labels, loc='upper center', ncol=3)
     # plt.show()
-    plt.savefig("plot_w_7_n_2.pdf", dpi=300)
+    plt.savefig("plot_w_3_n_2.pdf", dpi=300)
 
 
 if __name__ == "__main__":
     # load and process data
-    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300")
+    t_sample = 1
+    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300", t_sample)
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
@@ -186,7 +187,6 @@ if __name__ == "__main__":
 
     mean_dd_vms_rom_error = np.mean(dd_vms_rom_error)
     print(np.mean(dd_vms_rom_error), np.std(dd_vms_rom_error))
-    # assert False
     for i, idx_test in enumerate(idx_tests):
         print(f"------------Tau results-------------")
         mean_tau_error = np.mean(l2_error_tau[:, i], axis=0)

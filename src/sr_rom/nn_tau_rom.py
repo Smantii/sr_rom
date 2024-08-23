@@ -48,10 +48,12 @@ else:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device, flush=True)
 
-Re, A, B, tau, a_FOM, X = process_data(5, "2dcyl/Re200_300")
-A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=5, num_smoothing=2, r=5)
+t_sample = 200
+Re, A, B, tau, a_FOM, X, X_sampled = process_data(
+    5, "2dcyl/Re200_300", t_sample=t_sample)
+A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, 0.4, shuffle_test=False)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, 0.6, shuffle_test=False)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
@@ -59,16 +61,16 @@ num_t = tau.shape[1]
 t = np.linspace(500, 520, 2001)
 
 for i in range(5):
-    idx_train = np.argsort(train_val_data.y["X"][:, 0])
-    y_train = train_val_data.y["tau"][:, :, i].flatten("F")[idx_train]
+    idx_train = np.argsort(train_val_data.y["X_sampled"][:, 0])
+    y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[idx_train]
     y_test = test_data.y["tau"][:, :, i].flatten("F")
 
     # Standardization
-    mean_std_X_train = [np.mean(train_val_data.y["X"][idx_train, 1:], axis=0),
-                        np.std(train_val_data.y["X"][idx_train, 1:], axis=0)]
+    mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][idx_train, 1:], axis=0),
+                        np.std(train_val_data.y["X_sampled"][idx_train, 1:], axis=0)]
     mean_std_train_comp = [np.mean(y_train, axis=0),
                            np.std(y_train, axis=0)]
-    X_train_norm = (train_val_data.y["X"][idx_train, 1:] -
+    X_train_norm = (train_val_data.y["X_sampled"][idx_train, 1:] -
                     mean_std_X_train[0])/mean_std_X_train[1]
     y_train_norm = (y_train - mean_std_train_comp[0]) / \
         mean_std_train_comp[1]
@@ -94,7 +96,7 @@ for i in range(5):
 
     tic = time.time()
     gs = GridSearchCV(model, params, cv=3, verbose=3,
-                      scoring="neg_mean_squared_error", refit=True, n_jobs=8, return_train_score=True)
+                      scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
     gs.fit(X_train_norm, y_train_norm)
     print(f"Completed in {time.time() - tic}", flush=True)
     print(f"The best parameters are {gs.best_params_}")
