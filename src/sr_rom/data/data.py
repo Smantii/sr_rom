@@ -5,6 +5,7 @@ from alpine.data import Dataset
 from sklearn.model_selection import train_test_split as ttsplit
 import os
 import math
+from sr_rom.code.utils import load_rom_ops, get_rom_ops_r_dim
 
 
 def toy_data(k: float, r: int) -> Tuple[npt.NDArray, npt.NDArray]:
@@ -32,7 +33,7 @@ def generate_toy_data(r):
     return k_list, A_B_list
 
 
-def split_data(Re, A, B, tau, a_FOM, X, X_sampled, test_size=0.2, shuffle_test=False):
+def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuffle_test=False):
     num_data = len(Re)
     # num_test = round(test_size*num_data)
     # half_num_test = int(num_test/2)
@@ -89,15 +90,20 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, test_size=0.2, shuffle_test=F
     a_FOM_val = a_FOM[idx_val]
     a_FOM_test = a_FOM[idx_test]
 
+    residual_train_val = residual[idx_train_val]
+    residual_test = residual[idx_test]
+
     data_train = {'A': A_train, 'B': B_train, 'tau': tau_train,
                   'a_FOM': a_FOM_train, 'idx': idx_train}
     data_train_val = {'A': A_train_val, 'B': B_train_val,
                       'tau': tau_train_val, 'a_FOM': a_FOM_train_val,
-                      'idx': idx_train_val, "X": X_train_val, "X_sampled": X_train_val_sampled}
+                      'idx': idx_train_val, "X": X_train_val,
+                      "X_sampled": X_train_val_sampled, "residual": residual_train_val}
+    # FIXME: since we are not doing holdout, this is not updated
     data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
                 'a_FOM': a_FOM_val, 'idx': idx_val}
     data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
-                 'a_FOM': a_FOM_test, 'idx': idx_test, "X": X_test}
+                 'a_FOM': a_FOM_test, 'idx': idx_test, "X": X_test, "residual": residual_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
     train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
@@ -114,12 +120,15 @@ def process_data(r: int, bench_name: str, t_sample: int):
     dir_list = sorted(os.listdir(bench_path))
     num_Re = len(dir_list)
     num_t = 2001
+    num_t_sampled = math.ceil(num_t/t_sample)
 
     Re = np.zeros(num_Re)
     t = np.linspace(500, 520, num_t)
 
     A = np.zeros((num_Re, r, r))
     B = np.zeros((num_Re, r, r, r))
+    Aa_FOM = np.zeros((num_Re, num_t_sampled, r))
+    a_FOM_TBa_FOM = np.zeros((num_Re, num_t_sampled, r))
     tau = np.zeros((num_Re, num_t, r))
     a_FOM = np.zeros((num_Re, num_t, r))
 
@@ -135,6 +144,16 @@ def process_data(r: int, bench_name: str, t_sample: int):
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
 
+        # load matrices A and B true
+        a0_full, b0_full, cu_full, _ = load_rom_ops(
+            directory_path)
+        _, _, A_true_i, _, B_true_i, _, _ = get_rom_ops_r_dim(
+            a0_full, b0_full, cu_full, r)
+        B_true_i = B_true_i.reshape((r, r, r))
+        Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T
+        a_FOM_TBa_FOM[i, :, :] = np.einsum(
+            "lj, ijk, lk->li", curr_a_FOM[::t_sample, :], B_true_i, curr_a_FOM[::t_sample, :])
+
         Re[i] = curr_Re
         A[i, :, :] = curr_A
         B[i, :, :, :] = curr_B
@@ -146,7 +165,7 @@ def process_data(r: int, bench_name: str, t_sample: int):
 
     # fill matrices of data, both in the case of all and sampled times
     X = np.zeros((num_Re*num_t, r+1))
-    X_sampled = np.zeros((num_Re*math.ceil(num_t/t_sample), r+1))
+    X_sampled = np.zeros((num_Re*num_t_sampled, r+1))
     X[:, 0] = Re_grid.flatten()
     X_sampled[:, 0] = Re_sampled_grid.flatten()
     for i in range(5):
@@ -154,7 +173,12 @@ def process_data(r: int, bench_name: str, t_sample: int):
         # in this case only a portion of time steps is considered
         X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
 
-    return Re, A, B, tau, a_FOM, X, X_sampled
+    # compute residual
+    a_FOM_sampled = a_FOM[:, ::t_sample, :]
+    a_FOM_dot = (a_FOM_sampled[:, 1:, :] - a_FOM_sampled[:, :-1, :])/(t[1] - t[0])
+    residual = a_FOM_dot - Aa_FOM[:, :-1, :] - a_FOM_TBa_FOM[:, :-1, :]
+
+    return Re, A, B, tau, a_FOM, X, X_sampled, residual
 
 
 def smooth_data(A, B, tau, w, num_smoothing, r):
