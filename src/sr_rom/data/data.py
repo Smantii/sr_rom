@@ -55,16 +55,20 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     X_train_val = np.zeros((len(Re_train_val)*2001, 6))
     X_test = np.zeros((len(Re_test)*2001, 6))
     X_train_val_sampled = np.zeros((len(Re_train_val)*num_t_points_sampled, 6))
+    X_test_sampled = np.zeros((len(Re_test)*num_t_points_sampled, 6))
+
     # fill X_train_val and X_test
     for i in range(2001):
         X_train_val[len(Re_train_val)*i:len(Re_train_val)
                     * (i+1)] = X[idx_train_val + 61*i]
         X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
 
-    # fill X_train_val_sampled
+    # fill X_train_val and X_test sampled
     for i in range(num_t_points_sampled):
         X_train_val_sampled[len(Re_train_val)*i:len(Re_train_val)
                             * (i+1)] = X_sampled[idx_train_val + 61*i]
+        X_test_sampled[len(Re_test)*i:len(Re_test)
+                       * (i+1)] = X_sampled[idx_test + 61*i]
 
     # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
@@ -93,17 +97,19 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     residual_train_val = residual[idx_train_val]
     residual_test = residual[idx_test]
 
+    # FIXME: since we are not doing holdout, this are not updated
     data_train = {'A': A_train, 'B': B_train, 'tau': tau_train,
                   'a_FOM': a_FOM_train, 'idx': idx_train}
+    data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
+                'a_FOM': a_FOM_val, 'idx': idx_val}
+
     data_train_val = {'A': A_train_val, 'B': B_train_val,
                       'tau': tau_train_val, 'a_FOM': a_FOM_train_val,
                       'idx': idx_train_val, "X": X_train_val,
                       "X_sampled": X_train_val_sampled, "residual": residual_train_val}
-    # FIXME: since we are not doing holdout, this is not updated
-    data_val = {'A': A_val, 'B': B_val, 'tau': tau_val,
-                'a_FOM': a_FOM_val, 'idx': idx_val}
+
     data_test = {'A': A_test, 'B': B_test, 'tau': tau_test,
-                 'a_FOM': a_FOM_test, 'idx': idx_test, "X": X_test, "residual": residual_test}
+                 'a_FOM': a_FOM_test, 'idx': idx_test, "X": X_test, "X_sampled": X_test_sampled, "residual": residual_test}
 
     train_data = Dataset("Re_data", Re_train, data_train)
     train_val_data = Dataset("Re_data", Re_train_val, data_train_val)
