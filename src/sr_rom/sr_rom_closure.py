@@ -15,7 +15,6 @@ from jax import jit, grad
 import pygmo as pg
 import numpy as np
 import matplotlib.pyplot as plt
-import dctkit as dt
 from matplotlib import cm
 import os
 
@@ -27,9 +26,9 @@ config()
 num_cpus = 2
 
 
-def compute_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int) -> Tuple[float, List]:
+def compute_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int, time_step: int) -> Tuple[float, List]:
 
-    tau_true = Re_data.y["tau"][:, ::200, tau_comp_idx]
+    tau_true = Re_data.y["tau"][:, ::time_step, tau_comp_idx]
     tau_computed_sampled = individual(Re_data.y["X_sampled"][:, 1],
                                       Re_data.y["X_sampled"][:, 2],
                                       Re_data.y["X_sampled"][:, 3],
@@ -44,19 +43,20 @@ def compute_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int) -
     tau_computed_reshaped = tau_computed_sampled.reshape(tau_true.shape, order="F")
     total_error_tau = jnp.mean(
         (tau_true - tau_computed_reshaped)**2)
-    residual_error = 1/10000*jnp.mean(
+    residual_error = jnp.mean(
         (Re_data.y["residual"][:, :, tau_comp_idx] - tau_computed_reshaped[:, :-1])**2)
 
     return total_error_tau + residual_error, tau_computed
 
 
-def eval_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int) -> Tuple[float, List]:
+def eval_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int, time_step: int) -> Tuple[float, List]:
 
     warnings.filterwarnings('ignore')
 
     config()
 
-    total_error, A_computed = compute_MSE_sol(individual, Re_data, tau_comp_idx)
+    total_error, A_computed = compute_MSE_sol(
+        individual, Re_data, tau_comp_idx, time_step)
 
     if jnp.isnan(total_error) or total_error > 1e6:
         total_error = 1e6
@@ -64,7 +64,7 @@ def eval_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int) -> T
     return total_error, A_computed
 
 
-def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset, tau_comp_idx: int):
+def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset, tau_comp_idx: int, time_step: int):
     warnings.filterwarnings("ignore")
     config()
     individual, n_constants = compile_individual_with_consts(tree, toolbox)
@@ -72,7 +72,8 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset, tau_comp_idx: i
     def eval_err(consts):
         def ind_with_consts(a_1, a_2, a_3, a_4, a_5): return individual(
             a_1, a_2, a_3, a_4, a_5, consts)
-        total_error, _ = compute_MSE_sol(ind_with_consts, Re_data, tau_comp_idx)
+        total_error, _ = compute_MSE_sol(
+            ind_with_consts, Re_data, tau_comp_idx, time_step)
         return total_error
 
     objective = jit(eval_err)
@@ -121,7 +122,7 @@ def eval_MSE_and_tune_constants(tree, toolbox, Re_data: Dataset, tau_comp_idx: i
 
 @ray.remote(num_cpus=num_cpus)
 def eval_MSE(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
-             Re_data: Dataset, tau_comp_idx: int, penalty: float) -> float:
+             Re_data: Dataset, tau_comp_idx: int, time_step: int, penalty: float) -> float:
     objvals = [None]*len(individuals_batch)
 
     for i, individual in enumerate(individuals_batch):
@@ -129,13 +130,14 @@ def eval_MSE(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
 
         def callable_with_consts(a_1, a_2, a_3, a_4, a_5):
             return callable(a_1, a_2, a_3, a_4, a_5, individual.consts)
-        objvals[i], _ = eval_MSE_sol(callable_with_consts, Re_data, tau_comp_idx)
+        objvals[i], _ = eval_MSE_sol(
+            callable_with_consts, Re_data, tau_comp_idx, time_step)
     return objvals
 
 
 @ray.remote(num_cpus=num_cpus)
 def predict(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
-            Re_data: Dataset, tau_comp_idx: int, penalty: float) -> List:
+            Re_data: Dataset, tau_comp_idx: int, time_step: int, penalty: float) -> List:
 
     best_sols = [None]*len(individuals_batch)
 
@@ -144,14 +146,15 @@ def predict(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
 
         def callable_with_consts(a_1, a_2, a_3, a_4, a_5): return callable(
             a_1, a_2, a_3, a_4, a_5, individual.consts)
-        _, best_sols[i] = eval_MSE_sol(callable_with_consts, Re_data, tau_comp_idx)
+        _, best_sols[i] = eval_MSE_sol(
+            callable_with_consts, Re_data, tau_comp_idx, time_step)
 
     return best_sols
 
 
 @ray.remote(num_cpus=num_cpus)
 def fitness(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
-            Re_data: Dataset, tau_comp_idx: int, penalty: float) -> Tuple[float, ]:
+            Re_data: Dataset, tau_comp_idx: int, time_step: int, penalty: float) -> Tuple[float, ]:
 
     attributes = []*len(individuals_batch)
 
@@ -161,10 +164,7 @@ def fitness(individuals_batch: list[gp.PrimitiveSet], toolbox: Toolbox,
             MSE, consts = 1e6, []
         else:
             MSE, consts = eval_MSE_and_tune_constants(
-                individual, toolbox, Re_data, tau_comp_idx)
-
-        # callable = toolbox.compile(expr=individual)
-        # MSE, _ = eval_MSE_sol(callable, Re_data)
+                individual, toolbox, Re_data, tau_comp_idx, time_step)
 
         # add penalty on length of the tree to promote simpler solutions
         fitness = (MSE + penalty["reg_param"]*len(individual),)
@@ -194,7 +194,7 @@ def assign_consts(individuals, attributes):
         ind.fitness.values = attr["fitness"]
 
 
-def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, output_path):
+def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, time_step, output_path):
     tau_comp_idx = 0
     pset = gp.PrimitiveSetTyped("MAIN", [float]*5, float)
 
@@ -211,7 +211,8 @@ def sr_rom(config_file_data, train_data, val_data, train_val_data, test_data, ou
     penalty = config_file_data["gp"]['penalty']
 
     # define extra common arguments of fitness and predict functions
-    common_params = {'penalty': penalty, 'tau_comp_idx': tau_comp_idx}
+    common_params = {'penalty': penalty,
+                     'tau_comp_idx': tau_comp_idx, 'time_step': time_step}
 
     # set seed if needed
     seed = None
@@ -294,10 +295,9 @@ if __name__ == "__main__":
         config_file_data = yaml.safe_load(config_file)
 
     # load data
-    # from sr_rom.data.data import generate_toy_data
-    # k_array, A_B_list = generate_toy_data(5)
+    time_step = 1
     Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-        5, "2dcyl/Re200_300", 200)
+        5, "2dcyl/Re200_300", time_step)
     A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
     train_data, val_data, train_val_data, test_data = split_data(
         Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.6, False)
@@ -307,4 +307,4 @@ if __name__ == "__main__":
     else:
         output_path = "."
     sr_rom(config_file_data, train_data, val_data,
-           train_val_data, test_data, output_path)
+           train_val_data, test_data, time_step, output_path)

@@ -181,7 +181,8 @@ def process_data(r: int, bench_name: str, t_sample: int):
 
     # compute residual
     a_FOM_sampled = a_FOM[:, ::t_sample, :]
-    a_FOM_dot = (a_FOM_sampled[:, 1:, :] - a_FOM_sampled[:, :-1, :])/(t[1] - t[0])
+    h_t = (t[-1]-t[0])/(num_t_sampled-1)
+    a_FOM_dot = (a_FOM_sampled[:, 1:, :] - a_FOM_sampled[:, :-1, :])/h_t
     residual = a_FOM_dot - Aa_FOM[:, :-1, :] - a_FOM_TBa_FOM[:, :-1, :]
 
     return Re, A, B, tau, a_FOM, X, X_sampled, residual
@@ -215,9 +216,3 @@ def smooth_data(A, B, tau, w, num_smoothing, r):
         tau = tau_conv
 
     return A_conv, B_conv, tau_conv
-
-
-if __name__ == "__main__":
-    # k_array, A_B_list = generate_toy_data(3)
-    # data = split_data(k_array, A_B_list)
-    process_data(5, "2dcyl/Re200_300")
