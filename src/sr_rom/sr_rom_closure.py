@@ -42,7 +42,7 @@ def compute_MSE_sol(individual: Callable, Re_data: Dataset, tau_comp_idx: int) -
                               Re_data.y["X"][:, 5])
 
     tau_computed_reshaped = tau_computed_sampled.reshape(tau_true.shape, order="F")
-    total_error_tau = jnp.sum(
+    total_error_tau = jnp.mean(
         (tau_true - tau_computed_reshaped)**2)
     residual_error = 1/10000*jnp.mean(
         (Re_data.y["residual"][:, :, tau_comp_idx] - tau_computed_reshaped[:, :-1])**2)
