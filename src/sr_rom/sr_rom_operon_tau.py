@@ -128,10 +128,10 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
                 num_trials*gs.cv_results_["mean_test_score"]
 
         # refit the model with best hyperparams in the entire dataset
-        print(params_results["mean_test_score"])
+        print(params_results["mean_test_score"], flush=True)
         best_params_idx = np.nanargmax(params_results["mean_test_score"])
         best_params = params_results["params"][best_params_idx]
-        print(best_params)
+        print(best_params, flush=True)
         reg = SymbolicRegressor(**best_params)
         reg.fit(X_sampled_train_norm, y_sampled_train_norm)
         toc = time.time()
@@ -146,7 +146,8 @@ if __name__ == "__main__":
     windows = [3, 5, 7]
     # load data
     t_sample = 200
-    Re, A, B, tau, a_FOM, X, X_sampled = process_data(5, "2dcyl/Re200_300", t_sample)
+    Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
+        5, "2dcyl/Re200_300", t_sample)
 
     for w in windows:
         print(f"---Collecting results for window size {w}...!---", flush=True)
@@ -156,7 +157,7 @@ if __name__ == "__main__":
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
 
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, test_size=0.6, shuffle_test=False)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_size=0.6, shuffle_test=False)
 
         sr_rom_operon(train_val_data, test_data, X, tau_conv, t_sample,
                       output_path + new_folder + "/")

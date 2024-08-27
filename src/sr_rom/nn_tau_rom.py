@@ -49,11 +49,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device, flush=True)
 
 t_sample = 200
-Re, A, B, tau, a_FOM, X, X_sampled = process_data(
+Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
     5, "2dcyl/Re200_300", t_sample=t_sample)
-A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=5)
+A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=7, num_smoothing=2, r=5)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, 0.6, shuffle_test=False)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.6, shuffle_test=False)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
