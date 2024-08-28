@@ -115,7 +115,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
         params_results = {}
         tic = time.time()
         for trial in range(num_trials):
-            print(f"GS number {trial}")
+            print(f"GS number {trial}", flush=True)
             gs.fit(X_sampled_train_norm, y_sampled_train_norm)
             if trial == 0:
                 params_results["params"] = gs.cv_results_["params"]
