@@ -34,7 +34,7 @@ t_full = np.linspace(500., 520., 20001)
 
 test_perc_list = [20, 40, 60, 80]
 windows = [3, 5, 7]
-method = "LI"
+method = "LR"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 t_sample = 1
@@ -111,9 +111,10 @@ for test_perc in test_perc_list:
 
                 reg = LinearRegression()
                 reg.fit(X_sampled_train_norm, y_sampled_train_norm)
-                print(reg.score(X_train_norm, y_train_norm),
-                      reg.score(X_test_norm, y_test_norm))
+                r_2[i] = reg.score(X_test_norm, y_test_norm)
                 joblib.dump(reg, dir + "model_" + str(i) + ".pkl")
+
+            np.savetxt(dir + "r_2_test.txt", r_2)
 
         # save mean and std of X and y
         for i in range(5):
