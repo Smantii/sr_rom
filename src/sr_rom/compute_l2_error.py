@@ -37,7 +37,7 @@ windows = [3, 5, 7]
 method = "LR"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
-t_sample = 1
+t_sample = 200
 
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
     5, "2dcyl/Re200_300", t_sample)
