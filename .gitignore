@@ -26,6 +26,7 @@ __pycache__/*
 *ns
 *u0
 *uk
+*clean_log.py
 
 # Project files
 .ropeproject
