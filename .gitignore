@@ -27,6 +27,7 @@ __pycache__/*
 *u0
 *uk
 *clean_log.py
+src/sr_rom/results_*
 
 # Project files
 .ropeproject
