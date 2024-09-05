@@ -86,8 +86,9 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
     print("Started training procedure for tau", flush=True)
     idx_train_sampled = np.argsort(train_val_data.y["X_sampled"][:, 0])
     num_trials = 10
+    r = X.shape[1] - 1
     # training procedure for tau
-    for i in range(5):
+    for i in range(r):
         y_train = train_val_data.y["tau"][:, :, i].flatten("F")
         y_train_sampled = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[
             idx_train_sampled]
@@ -143,21 +144,22 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
 
 if __name__ == "__main__":
     output_path = sys.argv[1]
-    windows = [3, 5, 7]
+    windows = [3]
     # load data
     t_sample = 200
+    r = 2
     Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-        5, "2dcyl/Re200_300", t_sample)
+        r, "2dcyl/Re200_300", t_sample)
 
     for w in windows:
         print(f"---Collecting results for window size {w}...!---", flush=True)
         new_folder = "results_w_" + str(w) + "_n_2"
         os.mkdir(output_path + new_folder)
         # process data
-        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
+        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=r)
 
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_size=0.6, shuffle_test=False)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_size=0.8, shuffle_test=False)
 
         sr_rom_operon(train_val_data, test_data, X, tau_conv, t_sample,
                       output_path + new_folder + "/")

@@ -12,12 +12,14 @@ from sklearn.linear_model import LinearRegression
 
 
 def get_dir(task, folder_name, w, test_perc, make_dir=False):
-    main_dir = '/home/smanti/SR-ROM/src/sr_rom/'
+    # main_dir = '/home/smanti/SR-ROM/src/sr_rom/'
+    main_dir = "/home/smanti/SR-ROM/"
     task_folder = main_dir + "results_" + task + "/"
     dir = task_folder + folder_name + '/results_' + \
         str(test_perc) + "/results_w_" + str(w) + "_n_2/"
     if make_dir:
         os.makedirs(dir)
+    dir = '/home/smanti/SR-ROM/nn/results_80/results_w_3_n_2/'
     return dir
 
 
@@ -32,20 +34,21 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [20, 40, 60, 80]
-windows = [3, 5, 7]
-method = "LR"
+test_perc_list = [80]
+windows = [3]
+method = "NN"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 t_sample = 200
+r = 2
 
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-    5, "2dcyl/Re200_300", t_sample)
+    r, "2dcyl/Re200_300", t_sample)
 
 for test_perc in test_perc_list:
     for w in windows:
         print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
-        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=5)
+        A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=r)
         r_2 = np.zeros(5)
 
         # split in training and test
@@ -59,8 +62,8 @@ for test_perc in test_perc_list:
             folder_name = "li_tau"
             dir = get_dir(task, folder_name, w, test_perc)
             # linearly interpolate w.r.t. Reynolds and time
-            tau_interp = np.zeros((61, 20001, 5))*np.nan
-            for i in range(5):
+            tau_interp = np.zeros((61, 20001, r))*np.nan
+            for i in range(r):
                 tau_conv_interp_Re = interp1d(
                     Re[train_Re_idx], tau_conv[train_Re_idx, ::t_sample, i], axis=0, fill_value="extrapolate")
                 tau_Re = tau_conv_interp_Re(Re)
@@ -82,7 +85,7 @@ for test_perc in test_perc_list:
         elif method == "LR":
             folder_name = "lr"
             dir = get_dir(task, folder_name, w, test_perc, True)
-            for i in range(5):
+            for i in range(r):
                 y_train = train_val_data.y["tau"][:, :, i].flatten("F")
                 y_train_sampled = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
                 y_test = test_data.y["tau"][:, :, i].flatten("F")
@@ -117,7 +120,7 @@ for test_perc in test_perc_list:
             np.savetxt(dir + "r_2_test.txt", r_2)
 
         # save mean and std of X and y
-        for i in range(5):
+        for i in range(r):
             y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
 
             # Standardization

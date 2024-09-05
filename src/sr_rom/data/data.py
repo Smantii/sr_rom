@@ -52,10 +52,10 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
 
     num_t_points_sampled = int(X_sampled.shape[0]/61)
 
-    X_train_val = np.zeros((len(Re_train_val)*2001, 6))
-    X_test = np.zeros((len(Re_test)*2001, 6))
-    X_train_val_sampled = np.zeros((len(Re_train_val)*num_t_points_sampled, 6))
-    X_test_sampled = np.zeros((len(Re_test)*num_t_points_sampled, 6))
+    X_train_val = np.zeros((len(Re_train_val)*2001, X.shape[1]))
+    X_test = np.zeros((len(Re_test)*2001, X.shape[1]))
+    X_train_val_sampled = np.zeros((len(Re_train_val)*num_t_points_sampled, X.shape[1]))
+    X_test_sampled = np.zeros((len(Re_test)*num_t_points_sampled, X.shape[1]))
 
     # fill X_train_val and X_test
     for i in range(2001):
@@ -131,8 +131,8 @@ def process_data(r: int, bench_name: str, t_sample: int):
     Re = np.zeros(num_Re)
     t = np.linspace(500, 520, num_t)
 
-    A = np.zeros((num_Re, r, r))
-    B = np.zeros((num_Re, r, r, r))
+    A = np.zeros((num_Re, 5, 5))
+    B = np.zeros((num_Re, 5, 5, 5))
     Aa_FOM = np.zeros((num_Re, num_t_sampled, r))
     a_FOM_TBa_FOM = np.zeros((num_Re, num_t_sampled, r))
     tau = np.zeros((num_Re, num_t, r))
@@ -142,11 +142,11 @@ def process_data(r: int, bench_name: str, t_sample: int):
         directory_path = os.path.join(bench_path, directory)
         curr_Re = float(directory.replace("Re", ""))
         curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
-                              delimiter=',', usecols=range(r))
+                              delimiter=',', usecols=range(r))[:, :r]
         curr_A = np.loadtxt(directory_path+"/tildeA_N5",
-                            delimiter=',', usecols=range(r))
+                            delimiter=',', usecols=range(5))
         curr_B = np.loadtxt(directory_path+"/tildeB_N5",
-                            delimiter=',', usecols=range(r**2)).reshape((r, r, r))
+                            delimiter=',', usecols=range(5**2)).reshape((5, 5, 5))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
 
@@ -174,7 +174,7 @@ def process_data(r: int, bench_name: str, t_sample: int):
     X_sampled = np.zeros((num_Re*num_t_sampled, r+1))
     X[:, 0] = Re_grid.flatten()
     X_sampled[:, 0] = Re_sampled_grid.flatten()
-    for i in range(5):
+    for i in range(r):
         X[:, i+1] = a_FOM[:, :, i].flatten('F')
         # in this case only a portion of time steps is considered
         X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')

@@ -11,11 +11,11 @@ from matplotlib import cm
 
 
 class NeuralNetwork(nn.Module):
-    def __init__(self, hidden_units, dropout_rate=0.5):
+    def __init__(self, r, hidden_units, dropout_rate=0.5):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(5, hidden_units[0]),
+        hidden_layers = [nn.Linear(r, hidden_units[0]),
                          nn.LeakyReLU(), nn.Dropout(dropout_rate)]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
@@ -48,10 +48,11 @@ else:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device, flush=True)
 
-t_sample = 200
+t_sample = 400
+r = 2
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-    5, "2dcyl/Re200_300", t_sample=t_sample)
-A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=7, num_smoothing=2, r=5)
+    r, "2dcyl/Re200_300", t_sample=t_sample)
+A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=r)
 train_data, val_data, train_val_data, test_data = split_data(
     Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.8, shuffle_test=False)
 
@@ -60,7 +61,7 @@ num_t = tau.shape[1]
 
 t = np.linspace(500, 520, 2001)
 
-for i in range(5):
+for i in range(r):
     idx_train = np.argsort(train_val_data.y["X_sampled"][:, 0])
     y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[idx_train]
     y_test = test_data.y["tau"][:, :, i].flatten("F")
@@ -91,7 +92,8 @@ for i in range(5):
               'module__hidden_units': [[64, 128, 256, 128, 64],
                                        [64, 128, 256, 512, 256, 128, 64],
                                        [128, 256, 512, 1024, 512, 256, 128]],
-              'module__dropout_rate': [0.4, 0.5]
+              'module__dropout_rate': [0.4, 0.5],
+              'module__r': [2]
               }
 
     tic = time.time()
