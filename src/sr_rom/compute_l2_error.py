@@ -12,21 +12,19 @@ from sklearn.linear_model import LinearRegression
 
 
 def get_dir(task, folder_name, w, test_perc, make_dir=False):
-    # main_dir = '/home/smanti/SR-ROM/src/sr_rom/'
-    main_dir = "/home/smanti/SR-ROM/"
+    main_dir = '/home/smanti/SR-ROM/src/sr_rom/'
     task_folder = main_dir + "results_" + task + "/"
     dir = task_folder + folder_name + '/results_' + \
         str(test_perc) + "/results_w_" + str(w) + "_n_2/"
     if make_dir:
         os.makedirs(dir)
-    dir = '/home/smanti/SR-ROM/nn/results_80/results_w_3_n_2/'
     return dir
 
 
 def f(idx_Re):
-    _, _, _, _, sq_avgerr_L2, sq_avgrelerr_L2 = main(
+    _, avgerr_L2, _, avgrelerr_L2, _, _, u_closure = main(
         int(Re[idx_Re]), method, dir, idx_Re, False)
-    return idx_Re, sq_avgerr_L2, sq_avgrelerr_L2
+    return idx_Re, avgerr_L2, avgrelerr_L2, u_closure
 
 
 # load data
@@ -49,7 +47,8 @@ for test_perc in test_perc_list:
     for w in windows:
         print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=r)
-        r_2 = np.zeros(5)
+        r_2 = np.zeros(r)
+        u_coefs = np.zeros((61, 20001, r+1))
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
@@ -138,6 +137,7 @@ for test_perc in test_perc_list:
         for result in pool.map(f, range(len(Re))):
             l2_error[result[0]] = result[1]
             l2_rel_error[result[0]] = result[2]
+            u_coefs[result[0]] = result[3]
             print(result)
 
         np.save(dir + "l2_error.npy", l2_error)
