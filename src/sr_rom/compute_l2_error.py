@@ -142,5 +142,6 @@ for test_perc in test_perc_list:
 
         np.save(dir + "l2_error.npy", l2_error)
         np.save(dir + "l2_rel_error.npy", l2_rel_error)
+        np.save(dir + "u_coefs.npy", u_coefs)
 
     print("Done!")
