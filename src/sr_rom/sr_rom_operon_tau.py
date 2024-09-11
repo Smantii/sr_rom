@@ -28,7 +28,7 @@ def save_results(reg, X, tau, X_train_val, y_train_val, X_test, y_test,
     num_re = num_re_train_val + num_re_test
 
     # model prediction
-    X_scaled = (X[:, 1:] - mean_std_train_Re[0])/mean_std_train_Re[1]
+    X_scaled = (X[:, :] - mean_std_train_Re[0])/mean_std_train_Re[1]
     model_out = reg.predict(X_scaled)
 
     # revert data scaling
@@ -95,19 +95,19 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
         y_test = test_data.y["tau"][:, :, i].flatten("F")
 
         # Standardization
-        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
-                            np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
+        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, :], axis=0),
+                            np.std(train_val_data.y["X_sampled"][:, :], axis=0)]
         mean_std_train_comp = [np.mean(y_train, axis=0),
                                np.std(y_train, axis=0)]
-        X_train_norm = (train_val_data.y["X"][:, 1:] -
+        X_train_norm = (train_val_data.y["X"][:, :] -
                         mean_std_X_train[0])/mean_std_X_train[1]
         X_sampled_train_norm = (
-            train_val_data.y["X_sampled"][idx_train_sampled, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+            train_val_data.y["X_sampled"][idx_train_sampled, :] - mean_std_X_train[0])/mean_std_X_train[1]
         y_train_norm = (y_train - mean_std_train_comp[0]) / \
             mean_std_train_comp[1]
         y_sampled_train_norm = (y_train_sampled - mean_std_train_comp[0]) / \
             mean_std_train_comp[1]
-        X_test_norm = (test_data.y["X"][:, 1:] -
+        X_test_norm = (test_data.y["X"][:, :] -
                        mean_std_X_train[0])/mean_std_X_train[1]
         y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
 

@@ -22,9 +22,9 @@ def get_dir(task, folder_name, w, test_perc, make_dir=False):
 
 
 def f(idx_Re):
-    _, avgerr_L2, _, avgrelerr_L2, _, _, u_closure = main(
+    _, avgerr_L2, _, avgrelerr_L2, _, _, _ = main(
         int(Re[idx_Re]), method, dir, idx_Re, False)
-    return idx_Re, avgerr_L2, avgrelerr_L2, u_closure
+    return idx_Re, avgerr_L2, avgrelerr_L2
 
 
 # load data
@@ -33,7 +33,7 @@ t_full = np.linspace(500., 520., 20001)
 
 
 test_perc_list = [80]
-windows = [3]
+windows = [7]
 method = "NN"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
@@ -48,7 +48,7 @@ for test_perc in test_perc_list:
         print(f"Collecting results for {test_perc}% test and window {w}", flush=True)
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=r)
         r_2 = np.zeros(r)
-        u_coefs = np.zeros((61, 20001, r+1))
+        # u_coefs = np.zeros((61, 2001, r+1))
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
@@ -137,11 +137,11 @@ for test_perc in test_perc_list:
         for result in pool.map(f, range(len(Re))):
             l2_error[result[0]] = result[1]
             l2_rel_error[result[0]] = result[2]
-            u_coefs[result[0]] = result[3]
+            # u_coefs[result[0]] = result[3]
             print(result)
 
         np.save(dir + "l2_error.npy", l2_error)
         np.save(dir + "l2_rel_error.npy", l2_rel_error)
-        np.save(dir + "u_coefs.npy", u_coefs)
+        # np.save(dir + "u_coefs.npy", u_coefs)
 
     print("Done!")
