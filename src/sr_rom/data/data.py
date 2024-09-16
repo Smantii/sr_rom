@@ -50,7 +50,9 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
         Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=shuffle_test)
 
-    num_t_points_sampled = int(X_sampled.shape[0]/61)
+    num_Re = len(Re)
+
+    num_t_points_sampled = int(X_sampled.shape[0]/num_Re)
 
     X_train_val = np.zeros((len(Re_train_val)*2001, X.shape[1]))
     X_test = np.zeros((len(Re_test)*2001, X.shape[1]))
@@ -60,15 +62,15 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     # fill X_train_val and X_test
     for i in range(2001):
         X_train_val[len(Re_train_val)*i:len(Re_train_val)
-                    * (i+1)] = X[idx_train_val + 61*i]
-        X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + 61*i]
+                    * (i+1)] = X[idx_train_val + num_Re*i]
+        X_test[len(Re_test)*i:len(Re_test)*(i+1)] = X[idx_test + num_Re*i]
 
     # fill X_train_val and X_test sampled
     for i in range(num_t_points_sampled):
         X_train_val_sampled[len(Re_train_val)*i:len(Re_train_val)
-                            * (i+1)] = X_sampled[idx_train_val + 61*i]
+                            * (i+1)] = X_sampled[idx_train_val + num_Re*i]
         X_test_sampled[len(Re_test)*i:len(Re_test)
-                       * (i+1)] = X_sampled[idx_test + 61*i]
+                       * (i+1)] = X_sampled[idx_test + num_Re*i]
 
     # FIXME: adapt to this part to the new dataset
     Re_train, Re_val, idx_train,  idx_val = ttsplit(
@@ -141,30 +143,32 @@ def process_data(r: int, bench_name: str, t_sample: int):
     for i, directory in enumerate(dir_list):
         directory_path = os.path.join(bench_path, directory)
         curr_Re = float(directory.replace("Re", ""))
-        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
-                              delimiter=',', usecols=range(r))[:, :r]
-        curr_A = np.loadtxt(directory_path+"/tildeA_N5",
-                            delimiter=',', usecols=range(5))
-        curr_B = np.loadtxt(directory_path+"/tildeB_N5",
-                            delimiter=',', usecols=range(5**2)).reshape((5, 5, 5))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
-
-        # load matrices A and B true
-        a0_full, b0_full, cu_full, _ = load_rom_ops(
-            directory_path)
-        _, _, A_true_i, _, B_true_i, _, _ = get_rom_ops_r_dim(
-            a0_full, b0_full, cu_full, r)
-        B_true_i = B_true_i.reshape((r, r, r))
-        Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T
-        a_FOM_TBa_FOM[i, :, :] = np.einsum(
-            "lj, ijk, lk->li", curr_a_FOM[::t_sample, :], B_true_i, curr_a_FOM[::t_sample, :])
-
         Re[i] = curr_Re
-        A[i, :, :] = curr_A
-        B[i, :, :, :] = curr_B
-        tau[i, :, :] = curr_tau
         a_FOM[i, :, :] = curr_a_FOM
+
+        if curr_Re <= 300:
+            curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
+                                  delimiter=',', usecols=range(r))[:, :r]
+            curr_A = np.loadtxt(directory_path+"/tildeA_N5",
+                                delimiter=',', usecols=range(5))
+            curr_B = np.loadtxt(directory_path+"/tildeB_N5",
+                                delimiter=',', usecols=range(5**2)).reshape((5, 5, 5))
+
+            # load matrices A and B true
+            a0_full, b0_full, cu_full, _ = load_rom_ops(
+                directory_path)
+            _, _, A_true_i, _, B_true_i, _, _ = get_rom_ops_r_dim(
+                a0_full, b0_full, cu_full, r)
+            B_true_i = B_true_i.reshape((r, r, r))
+            Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T
+            a_FOM_TBa_FOM[i, :, :] = np.einsum(
+                "lj, ijk, lk->li", curr_a_FOM[::t_sample, :], B_true_i, curr_a_FOM[::t_sample, :])
+
+            A[i, :, :] = curr_A
+            B[i, :, :, :] = curr_B
+            tau[i, :, :] = curr_tau
 
     Re_grid, _ = np.meshgrid(Re, t)
     Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])

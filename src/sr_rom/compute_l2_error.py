@@ -32,16 +32,16 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [80]
-windows = [7]
-method = "NN"
+test_perc_list = [40, 55, 70, 85]
+windows = [3, 5, 7]
+method = "SR"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 t_sample = 200
 r = 2
 
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-    r, "2dcyl/Re200_300", t_sample)
+    r, "2dcyl/Re200_400", t_sample)
 
 for test_perc in test_perc_list:
     for w in windows:
@@ -52,7 +52,7 @@ for test_perc in test_perc_list:
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_perc/100, shuffle)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.85, shuffle)
 
         train_Re_idx = train_val_data.y["idx"]
         test_Re_idx = test_data.y["idx"]

@@ -26,7 +26,20 @@ __pycache__/*
 *ns
 *u0
 *uk
+*uv
+*uvs
+*ips
+*umax
+*umin
+*u
+*ua
+*uas
+*u2a
+*uf
+*nbo
+*timek
 *clean_log.py
+*git-filter-repo.py
 src/sr_rom/results_*
 
 # Project files

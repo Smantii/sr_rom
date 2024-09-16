@@ -115,7 +115,7 @@ def simplify_(simplify_models, A_model_flatten, B_model_flatten, r):
     print("Done!")
 
 
-def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_lr, dd_vms_rom_error):
+def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_lr, dd_vms_rom_error, grom):
     fig, axis = plt.subplots(nrows=4, ncols=1, figsize=(6.5, 8))
     letters = ["A", "B", "C", "D"]
     fontsize = 10
@@ -131,7 +131,8 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_
                      marker='o', label="SR-ROM", ms=2.5)
         axis[i].plot(Re, l2_error_lr[:, i, 2], c='#ff7f00',
                      marker='o', label="LR-ROM", ms=2.5)
-        axis[i].scatter(Re[idx_test], 0.*np.ones_like(Re[idx_test]),
+        axis[i].plot(Re, grom, marker='o', label="GROM", ms=2.5)
+        axis[i].scatter(Re[idx_test], 0.045*np.ones_like(Re[idx_test]),
                         marker=".", c="#e41a1c", clip_on=False)
         axis[i].text(-0.15, 1, letters[i], transform=axis[i].transAxes, weight="bold")
         axis[i].set_ylim(bottom=0)
@@ -140,6 +141,7 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_
         axis[i].set_ylabel(r"$\epsilon_{L^2}$")
         axis[i].set_xticks([200, 220, 240, 260, 280, 300])
         axis[i].set_xlim(200, 300)
+        axis[i].set_ylim(bottom=0.045)
         handles, labels = axis[i].get_legend_handles_labels()
 
     fig.legend(handles, labels, loc='upper center', ncol=3)
@@ -149,10 +151,10 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_
 
 if __name__ == "__main__":
     # load and process data
-    t_sample = 1
+    t_sample = 200
     Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
         5, "2dcyl/Re200_300", t_sample)
-    simplify_models = True
+    simplify_models = False
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
@@ -167,6 +169,7 @@ if __name__ == "__main__":
     sr_path = os.path.join(dir_path, "results_extrapolation/sr")
     dd_vms_rom_error = np.loadtxt(
         dir_path + "/results_extrapolation/vmsrom_l2_error.csv", delimiter=",", skiprows=1)[:, 1]
+    grom = np.load(dir_path + "/results_extrapolation/grom.npy")
     results_dir = np.sort([name for name in os.listdir(lr_path)])
     idx_tests = []
     # iterate over directory with different test size
@@ -208,12 +211,13 @@ if __name__ == "__main__":
                         text_file.write(fun_name + " = " + str(simp_model) + "\n")
 
     plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn,
-                l2_error_sr, l2_error_lr, dd_vms_rom_error)
+                l2_error_sr, l2_error_lr, dd_vms_rom_error, grom)
 
     # mean_dd_vms_rom_error = np.mean(dd_vms_rom_error)
     print(np.mean(dd_vms_rom_error), np.std(dd_vms_rom_error))
     for i, idx_test in enumerate(idx_tests):
-        print(np.mean(l2_error_nn[:, i], axis=0), np.std(l2_error_nn[:, i], axis=0))
+        print(np.mean(l2_error_sr[idx_test, i], axis=0),
+              np.std(l2_error_sr[idx_test, i], axis=0))
 
     # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
     # print("Simplifying...")
