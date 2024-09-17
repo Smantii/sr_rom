@@ -15,7 +15,7 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.flatten = nn.Flatten()
         # define hidden_layers
-        hidden_layers = [nn.Linear(r, hidden_units[0]),
+        hidden_layers = [nn.Linear(r+1, hidden_units[0]),
                          nn.LeakyReLU(), nn.Dropout(dropout_rate)]
         for i in range(1, len(hidden_units)):
             hidden_layers.append(nn.Linear(hidden_units[i-1], hidden_units[i]))
@@ -31,6 +31,17 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
+
+
+class RegularizedNet(NeuralNetwork):
+    def __init__(self, *args, lambda1=0.01, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lambda1 = lambda1
+
+    def get_loss(self, y_pred, y_true, X=None, training=False):
+        loss = super().get_loss(y_pred, y_true, X=X, training=training)
+        loss += self.lambda1 * sum([w.abs().sum() for w in self.module_.parameters()])
+        return loss
 
 
 output_path = sys.argv[1]
@@ -51,10 +62,10 @@ print(device, flush=True)
 t_sample = 200
 r = 2
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
-    r, "2dcyl/Re200_300", t_sample=t_sample)
-A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=7, num_smoothing=2, r=r)
+    r, "2dcyl/Re200_400", t_sample=t_sample)
+A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=3, num_smoothing=2, r=r)
 train_data, val_data, train_val_data, test_data = split_data(
-    Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.8, shuffle_test=False)
+    Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.6, shuffle_test=False)
 
 num_Re = len(Re)
 num_t = tau.shape[1]
@@ -67,16 +78,18 @@ for i in range(r):
     y_test = test_data.y["tau"][:, :, i].flatten("F")
 
     # Standardization
-    mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][idx_train, 1:], axis=0),
-                        np.std(train_val_data.y["X_sampled"][idx_train, 1:], axis=0)]
-    mean_std_train_comp = [np.mean(y_train, axis=0),
-                           np.std(y_train, axis=0)]
-    X_train_norm = (train_val_data.y["X_sampled"][idx_train, 1:] -
-                    mean_std_X_train[0])/mean_std_X_train[1]
-    y_train_norm = (y_train - mean_std_train_comp[0]) / \
-        mean_std_train_comp[1]
-    X_test_norm = (test_data.y["X"][:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
-    y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
+    max_min_X_train = [np.max(train_val_data.y["X_sampled"][idx_train, :], axis=0),
+                       np.min(train_val_data.y["X_sampled"][idx_train, :], axis=0)]
+    max_min_train_comp = [np.max(y_train, axis=0),
+                          np.min(y_train, axis=0)]
+    X_train_norm = (train_val_data.y["X_sampled"][idx_train, :] -
+                    max_min_X_train[1])/(max_min_X_train[0] - max_min_X_train[1])
+    y_train_norm = (y_train - max_min_train_comp[1]) / \
+        (max_min_train_comp[0] - max_min_train_comp[1])
+    X_test_norm = (test_data.y["X"][:, :] - max_min_X_train[1]
+                   )/(max_min_X_train[0] - max_min_X_train[1])
+    y_test_norm = (y_test - max_min_train_comp[1]) / \
+        (max_min_train_comp[0] - max_min_train_comp[1])
 
     X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
     y_train_norm = torch.from_numpy(y_train_norm.reshape(-1, 1)).to(torch.float32)
@@ -84,11 +97,12 @@ for i in range(r):
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
     model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                               optimizer=torch.optim.Adam, max_epochs=100,
+                               optimizer=torch.optim.Adam, max_epochs=200,
                                train_split=None, device="cuda", iterator_train__shuffle=True)
 
     params = {'lr': [1e-4, 1e-3],
               'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
+              # 'module__lambda1': [1e-6, 1e-5, 1e-4, 1e-3],
               'module__hidden_units': [[64, 128, 256, 128, 64],
                                        [64, 128, 256, 512, 256, 128, 64],
                                        [128, 256, 512, 1024, 512, 256, 128]],
@@ -111,8 +125,9 @@ for i in range(r):
     print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
     print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
+    '''
     # plot prediction
-    X_scaled = (X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+    X_scaled = (X[:, :] - mean_std_X_train[0])/mean_std_X_train[1]
 
     model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
@@ -143,3 +158,4 @@ for i in range(r):
     model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
     np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
     gs.best_estimator_.save_params(output_path + "model_param_" + str(i) + ".pkl")
+    '''

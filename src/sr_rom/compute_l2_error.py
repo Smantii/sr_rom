@@ -52,7 +52,7 @@ for test_perc in test_perc_list:
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, 0.85, shuffle)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_perc, shuffle)
 
         train_Re_idx = train_val_data.y["idx"]
         test_Re_idx = test_data.y["idx"]

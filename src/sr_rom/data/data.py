@@ -126,7 +126,8 @@ def process_data(r: int, bench_name: str, t_sample: int):
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    num_Re = len(dir_list)
+    # num_Re = len(dir_list)
+    num_Re = 61
     num_t = 2001
     num_t_sampled = math.ceil(num_t/t_sample)
 
@@ -145,10 +146,12 @@ def process_data(r: int, bench_name: str, t_sample: int):
         curr_Re = float(directory.replace("Re", ""))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
-        Re[i] = curr_Re
-        a_FOM[i, :, :] = curr_a_FOM
+        # Re[i] = curr_Re
+        # a_FOM[i, :, :] = curr_a_FOM
 
         if curr_Re <= 300:
+            Re[i] = curr_Re
+            a_FOM[i, :, :] = curr_a_FOM
             curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
                                   delimiter=',', usecols=range(r))[:, :r]
             curr_A = np.loadtxt(directory_path+"/tildeA_N5",
