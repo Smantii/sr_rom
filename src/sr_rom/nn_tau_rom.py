@@ -33,17 +33,6 @@ class NeuralNetwork(nn.Module):
         return logits
 
 
-class RegularizedNet(NeuralNetwork):
-    def __init__(self, *args, lambda1=0.01, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lambda1 = lambda1
-
-    def get_loss(self, y_pred, y_true, X=None, training=False):
-        loss = super().get_loss(y_pred, y_true, X=X, training=training)
-        loss += self.lambda1 * sum([w.abs().sum() for w in self.module_.parameters()])
-        return loss
-
-
 output_path = sys.argv[1]
 seed = 42
 np.random.seed(seed)
@@ -74,22 +63,22 @@ t = np.linspace(500, 520, 2001)
 
 for i in range(r):
     idx_train = np.argsort(train_val_data.y["X_sampled"][:, 0])
+    idx_test = np.argsort(test_data.y["X"][:, 0])
     y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[idx_train]
-    y_test = test_data.y["tau"][:, :, i].flatten("F")
+    y_test = test_data.y["tau"][:, :, i].flatten("F")[idx_test]
 
     # Standardization
-    max_min_X_train = [np.max(train_val_data.y["X_sampled"][idx_train, :], axis=0),
-                       np.min(train_val_data.y["X_sampled"][idx_train, :], axis=0)]
-    max_min_train_comp = [np.max(y_train, axis=0),
-                          np.min(y_train, axis=0)]
-    X_train_norm = (train_val_data.y["X_sampled"][idx_train, :] -
-                    max_min_X_train[1])/(max_min_X_train[0] - max_min_X_train[1])
-    y_train_norm = (y_train - max_min_train_comp[1]) / \
-        (max_min_train_comp[0] - max_min_train_comp[1])
-    X_test_norm = (test_data.y["X"][:, :] - max_min_X_train[1]
-                   )/(max_min_X_train[0] - max_min_X_train[1])
-    y_test_norm = (y_test - max_min_train_comp[1]) / \
-        (max_min_train_comp[0] - max_min_train_comp[1])
+    mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][idx_train, 1:], axis=0),
+                        np.std(train_val_data.y["X_sampled"][idx_train, 1:], axis=0)]
+    X_train_norm = train_val_data.y["X_sampled"][idx_train]
+    X_test_norm = test_data.y["X"][idx_test]
+    X_train_norm[:, 0] /= 1000
+    X_test_norm[:, 0] /= 1000
+    X_train_norm[:, 1:] = (X_train_norm[:, 1:] -
+                           mean_std_X_train[0])/mean_std_X_train[1]
+    X_test_norm[:, 1:] = (X_test_norm[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+    y_train_norm = y_train
+    y_test_norm = y_test
 
     X_train_norm = torch.from_numpy(X_train_norm).to(torch.float32)
     y_train_norm = torch.from_numpy(y_train_norm.reshape(-1, 1)).to(torch.float32)
@@ -97,12 +86,11 @@ for i in range(r):
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
     model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                               optimizer=torch.optim.Adam, max_epochs=200,
+                               optimizer=torch.optim.Adam, max_epochs=1000,
                                train_split=None, device="cuda", iterator_train__shuffle=True)
 
     params = {'lr': [1e-4, 1e-3],
               'optimizer__weight_decay': [1e-5, 1e-4, 1e-3],
-              # 'module__lambda1': [1e-6, 1e-5, 1e-4, 1e-3],
               'module__hidden_units': [[64, 128, 256, 128, 64],
                                        [64, 128, 256, 512, 256, 128, 64],
                                        [128, 256, 512, 1024, 512, 256, 128]],
@@ -125,15 +113,15 @@ for i in range(r):
     print(f"The R^2 in the training set is {r2_train.item()}", flush=True)
     print(f"The R^2 in the test set is {r2_test.item()}", flush=True)
 
-    '''
     # plot prediction
-    X_scaled = (X[:, :] - mean_std_X_train[0])/mean_std_X_train[1]
+    X_scaled = X
+    X_scaled[:, 0] /= 1000
+    X_scaled[:, 1:] = (X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
 
     model_out = gs.predict(torch.from_numpy(X_scaled).to(torch.float32).cuda())
 
     # rescale out back
-    model_out_np = model_out*mean_std_train_comp[1] + mean_std_train_comp[0]
-    pred = model_out_np.reshape((num_Re, num_t), order="F")
+    pred = model_out.reshape((num_Re, num_t), order="F")
 
     re_mesh, t_mesh = np.meshgrid(Re, t)
 
@@ -158,4 +146,3 @@ for i in range(r):
     model_out_reshaped = model_out.reshape((num_Re, num_t), order="F")
     np.save(output_path + "model_pred_" + str(i) + ".npy", model_out_reshaped)
     gs.best_estimator_.save_params(output_path + "model_param_" + str(i) + ".pkl")
-    '''
