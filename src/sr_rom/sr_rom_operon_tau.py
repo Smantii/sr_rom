@@ -78,8 +78,8 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
             'optimizer_iterations': [10],
             'n_threads': [16],
             'max_evaluations': [int(1e6)],
-            'tournament_size': [3],
-            'max_length': [20, 60, 100, 140],
+            'tournament_size': [3, 5],
+            'max_length': [20, 40, 60, 80, 100],
             'generations': [10, 25, 50],
             'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
 
@@ -89,7 +89,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
     idx_train = np.argsort(train_val_data.y["X_sampled"][:, 0])
     idx_test = np.argsort(test_data.y["X"][:, 0])
 
-    num_trials = 10
+    num_trials = 50
     r = X.shape[1] - 1
     # training procedure for tau
     for i in range(r):
@@ -111,7 +111,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
         y_train_norm = y_train
         y_test_norm = y_test
 
-        gs = GridSearchCV(SymbolicRegressor(), params, cv=5, verbose=0, refit=False,
+        gs = GridSearchCV(SymbolicRegressor(), params, cv=3, verbose=0, refit=False,
                           n_jobs=-1, return_train_score=False)
         params_results = {}
         tic = time.time()
@@ -143,7 +143,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
 
 if __name__ == "__main__":
     output_path = sys.argv[1]
-    windows = [3]
+    windows = [3, 5, 7]
     # load data
     t_sample = 200
     r = 2
