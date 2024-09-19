@@ -29,9 +29,9 @@ def save_results(reg, X, tau, X_train_val, y_train_val, X_test, y_test,
     num_re = num_re_train_val + num_re_test
 
     # model prediction
-    X_scaled = X
+    X_scaled = X.copy()
     X_scaled[:, 0] /= 1000
-    X_scaled[:, 1:] = (X[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+    X_scaled[:, 1:] = (X_scaled[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
     model_out = reg.predict(X_scaled)
 
     # revert data scaling
@@ -78,36 +78,39 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
             'optimizer_iterations': [10],
             'n_threads': [16],
             'max_evaluations': [int(1e6)],
-            'tournament_size': [3, 5],
-            'max_length': [20, 40, 60, 80, 100],
+            'tournament_size': [3],
+            'max_length': [20, 60, 100, 140],
             'generations': [10, 25, 50],
             'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
 
         }
 
     print("Started training procedure for tau", flush=True)
-    idx_train = np.argsort(train_val_data.y["X_sampled"][:, 0])
-    idx_test = np.argsort(test_data.y["X"][:, 0])
+    X_train = train_val_data.y["X_sampled"].copy()
+    X_test = test_data.y["X"].copy()
+    idx_train = np.argsort(X_train[:, 0])
+    idx_test = np.argsort(X_test[:, 0])
 
-    num_trials = 50
+    # Standardization
+    mean_std_X_train = [np.mean(X_train[:, 1:], axis=0),
+                        np.std(X_train[:, 1:], axis=0)]
+    X_train_norm = X_train[idx_train]
+    X_test_norm = X_test[idx_test]
+    X_train_norm[:, 0] /= 1000
+    X_test_norm[:, 0] /= 1000
+    X_train_norm[:, 1:] = (X_train_norm[:, 1:] -
+                           mean_std_X_train[0])/mean_std_X_train[1]
+    X_test_norm[:, 1:] = (X_test_norm[:, 1:] -
+                          mean_std_X_train[0])/mean_std_X_train[1]
+
+    num_trials = 10
     r = X.shape[1] - 1
     # training procedure for tau
     for i in range(r):
         y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")[
-            idx_train]
-        y_test = test_data.y["tau"][:, :, i].flatten("F")[idx_test]
+            idx_train].copy()
+        y_test = test_data.y["tau"][:, :, i].flatten("F")[idx_test].copy()
 
-        # Standardization
-        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][idx_train, 1:], axis=0),
-                            np.std(train_val_data.y["X_sampled"][idx_train, 1:], axis=0)]
-        X_train_norm = train_val_data.y["X_sampled"][idx_train]
-        X_test_norm = test_data.y["X"][idx_test]
-        X_train_norm[:, 0] /= 1000
-        X_test_norm[:, 0] /= 1000
-        X_train_norm[:, 1:] = (X_train_norm[:, 1:] -
-                               mean_std_X_train[0])/mean_std_X_train[1]
-        X_test_norm[:, 1:] = (X_test_norm[:, 1:] -
-                              mean_std_X_train[0])/mean_std_X_train[1]
         y_train_norm = y_train
         y_test_norm = y_test
 

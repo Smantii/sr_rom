@@ -86,7 +86,7 @@ for i in range(r):
     y_test_norm = torch.from_numpy(y_test_norm.reshape(-1, 1)).to(torch.float32)
 
     model = NeuralNetRegressor(module=NeuralNetwork, batch_size=512, verbose=0,
-                               optimizer=torch.optim.Adam, max_epochs=1000,
+                               optimizer=torch.optim.Adam, max_epochs=300,
                                train_split=None, device="cuda", iterator_train__shuffle=True)
 
     params = {'lr': [1e-4, 1e-3],
