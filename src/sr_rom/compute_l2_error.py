@@ -18,6 +18,7 @@ def get_dir(task, folder_name, w, test_perc, make_dir=False):
         str(test_perc) + "/results_w_" + str(w) + "_n_2/"
     if make_dir:
         os.makedirs(dir)
+    dir = '/home/smanti/SR-ROM/nn/results_60/results_w_3_n_2/'
     return dir
 
 
@@ -32,9 +33,9 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [40, 55, 70, 85]
-windows = [3, 5, 7]
-method = "SR"
+test_perc_list = [60]
+windows = [5]
+method = "NN"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 t_sample = 200
@@ -52,7 +53,7 @@ for test_perc in test_perc_list:
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
-            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_perc, shuffle)
+            Re, A_conv, B_conv, tau_conv, a_FOM, X, X_sampled, residual, test_perc/100, shuffle)
 
         train_Re_idx = train_val_data.y["idx"]
         test_Re_idx = test_data.y["idx"]
@@ -84,51 +85,40 @@ for test_perc in test_perc_list:
         elif method == "LR":
             folder_name = "lr"
             dir = get_dir(task, folder_name, w, test_perc, True)
-            for i in range(r):
-                y_train = train_val_data.y["tau"][:, :, i].flatten("F")
-                y_train_sampled = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
-                y_test = test_data.y["tau"][:, :, i].flatten("F")
-
-                # Standardization
-                mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
-                                    np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
-                mean_std_train_comp = [np.mean(y_train, axis=0),
-                                       np.std(y_train, axis=0)]
-                X_train_norm = (train_val_data.y["X"][:, 1:] -
-                                mean_std_X_train[0])/mean_std_X_train[1]
-                X_sampled_train_norm = (
-                    train_val_data.y["X_sampled"][:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
-                y_train_norm = (y_train - mean_std_train_comp[0]) / \
-                    mean_std_train_comp[1]
-                y_sampled_train_norm = (y_train_sampled - mean_std_train_comp[0]) / \
-                    mean_std_train_comp[1]
-                X_test_norm = (test_data.y["X"][:, 1:] -
-                               mean_std_X_train[0])/mean_std_X_train[1]
-                y_test_norm = (y_test - mean_std_train_comp[0])/mean_std_train_comp[1]
-
-                # reshuffling
-                p_train = np.random.permutation(len(X_sampled_train_norm))
-                X_sampled_train_norm = X_sampled_train_norm[p_train]
-                y_sampled_train_norm = y_sampled_train_norm[p_train]
-
-                reg = LinearRegression()
-                reg.fit(X_sampled_train_norm, y_sampled_train_norm)
-                r_2[i] = reg.score(X_test_norm, y_test_norm)
-                joblib.dump(reg, dir + "model_" + str(i) + ".pkl")
-
-            np.savetxt(dir + "r_2_test.txt", r_2)
-
-        # save mean and std of X and y
-        for i in range(r):
-            y_train = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
 
             # Standardization
             mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
                                 np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
-            mean_std_train_comp = [np.mean(y_train, axis=0),
-                                   np.std(y_train, axis=0)]
-            np.save(dir + "mean_std_X_train.npy", mean_std_X_train)
-            np.save(dir + "mean_std_train_comp_" + str(i) + ".npy", mean_std_train_comp)
+            X_sampled_train_norm = train_val_data.y["X_sampled"].copy()
+            X_test_norm = test_data.y["X"].copy()
+            X_sampled_train_norm[:, 0] /= 1000
+            X_test_norm[:, 0] /= 1000
+            X_sampled_train_norm[:, 1:] = (
+                X_sampled_train_norm[:, 1:] - mean_std_X_train[0])/mean_std_X_train[1]
+            X_test_norm[:, 1:] = (X_test_norm[:, 1:] -
+                                  mean_std_X_train[0])/mean_std_X_train[1]
+
+            for i in range(r):
+                y_train_sampled = train_val_data.y["tau"][:, ::t_sample, i].flatten("F")
+                y_test = test_data.y["tau"][:, :, i].flatten("F")
+
+                # reshuffling
+                p_train = np.random.permutation(len(X_sampled_train_norm))
+                X_sampled_train_norm = X_sampled_train_norm[p_train]
+                y_train_sampled = y_train_sampled[p_train]
+
+                reg = LinearRegression()
+                reg.fit(X_sampled_train_norm, y_train_sampled)
+                r_2[i] = reg.score(X_test_norm, y_test)
+                joblib.dump(reg, dir + "model_" + str(i) + ".pkl")
+
+            np.savetxt(dir + "r_2_test.txt", r_2)
+
+        # save mean and std of X
+        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
+                            np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
+        print(dir)
+        np.save(dir + "mean_std_X_train.npy", mean_std_X_train)
 
         l2_error = np.zeros(len(Re))
         l2_rel_error = np.zeros(len(Re))

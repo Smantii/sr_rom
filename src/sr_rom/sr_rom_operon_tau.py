@@ -81,7 +81,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
             'tournament_size': [3],
             'max_length': [20, 60, 100, 140],
             'generations': [10, 25, 50],
-            'allowed_symbols': ['add,sub,mul,sin,cos,sqrt,square,acos,asin,exp,log,pow,constant,variable'],
+            'allowed_symbols': ['add,sub,mul,sin,cos,square,exp,log,constant,variable'],
 
         }
 
@@ -114,7 +114,7 @@ def sr_rom_operon(train_val_data, test_data, X, tau, t_sample, output_path):
         y_train_norm = y_train
         y_test_norm = y_test
 
-        gs = GridSearchCV(SymbolicRegressor(), params, cv=3, verbose=0, refit=False,
+        gs = GridSearchCV(SymbolicRegressor(), params, cv=2, verbose=0, refit=False,
                           n_jobs=-1, return_train_score=False)
         params_results = {}
         tic = time.time()

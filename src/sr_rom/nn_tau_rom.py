@@ -99,7 +99,7 @@ for i in range(r):
               }
 
     tic = time.time()
-    gs = GridSearchCV(model, params, cv=3, verbose=3,
+    gs = GridSearchCV(model, params, cv=2, verbose=3,
                       scoring="neg_mean_squared_error", refit=True, n_jobs=3, return_train_score=True)
     gs.fit(X_train_norm, y_train_norm)
     print(f"Completed in {time.time() - tic}", flush=True)
