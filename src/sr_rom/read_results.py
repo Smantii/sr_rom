@@ -125,13 +125,13 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_
         #             marker='o', label="DD VMS-ROM", ms=2.5, clip_on=False)
         # axis[i].plot(Re, l2_error_tau[:, i, 0], c='#377eb8',
         #             marker='o', label="VMS-ROM interp", ms=2.5, clip_on=False)
-        axis[i].plot(Re, l2_error_nn[:, i, 0], c='#4daf4a',
+        axis[i].plot(Re, l2_error_nn[:, i, 2], c='#4daf4a',
                      marker='o', label="NN-ROM", ms=2.5)
-        axis[i].plot(Re, l2_error_sr[:, i, 0], c='#984ea3',
+        axis[i].plot(Re, l2_error_sr[:, i, 2], c='#984ea3',
                      marker='o', label="SR-ROM", ms=2.5)
-        axis[i].plot(Re, l2_error_lr[:, i, 0], c='#ff7f00',
+        axis[i].plot(Re, l2_error_lr[:, i, 2], c='#ff7f00',
                      marker='o', label="LR-ROM", ms=2.5)
-        # axis[i].plot(Re, grom, marker='o', label="GROM", ms=2.5)
+        axis[i].plot(Re, grom, marker='o', label="GROM", ms=2.5)
         axis[i].scatter(Re[idx_test], 0.045*np.ones_like(Re[idx_test]),
                         marker=".", c="#e41a1c", clip_on=False)
         axis[i].text(-0.15, 1, letters[i], transform=axis[i].transAxes, weight="bold")
@@ -139,14 +139,14 @@ def plot_errors(Re, idx_tests, l2_error_tau, l2_error_nn, l2_error_sr, l2_error_
         axis[i].grid(True)
         axis[i].set_xlabel("Re")
         axis[i].set_ylabel(r"$\epsilon_{L^2}$")
-        axis[i].set_xticks([200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400])
-        axis[i].set_xlim(200, 400)
+        axis[i].set_xticks([200, 220, 240, 260, 280, 300])
+        axis[i].set_xlim(200, 300)
         axis[i].set_ylim(bottom=0.045)
         handles, labels = axis[i].get_legend_handles_labels()
 
     fig.legend(handles, labels, loc='upper center', ncol=3)
     # plt.show()
-    plt.savefig("plot_w_3_n_2_11_r_2.pdf", dpi=300)
+    plt.savefig("plot_w_7_n_2_11_r_2_Re.pdf", dpi=300)
 
 
 if __name__ == "__main__":
@@ -158,10 +158,10 @@ if __name__ == "__main__":
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     r2_scores = np.zeros((3, 5), dtype=object)
-    l2_error_tau = np.zeros((80, 4, 3), dtype=np.float64)
-    l2_error_nn = np.zeros((80, 4, 3), dtype=np.float64)
-    l2_error_sr = np.zeros((80, 4, 3), dtype=np.float64)
-    l2_error_lr = np.zeros((80, 4, 3), dtype=np.float64)
+    l2_error_tau = np.zeros((61, 4, 3), dtype=np.float64)
+    l2_error_nn = np.zeros((61, 4, 3), dtype=np.float64)
+    l2_error_sr = np.zeros((61, 4, 3), dtype=np.float64)
+    l2_error_lr = np.zeros((61, 4, 3), dtype=np.float64)
 
     # li_tau_path = os.path.join(dir_path, "results_extrapolation/li_tau")
     lr_path = os.path.join(dir_path, "results_extrapolation/lr")
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         w_dir = np.sort([name for name in os.listdir(
             res_path_lr) if name.replace(".out", "") == name])
         _, _, _, test_data = split_data(
-            Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.4 + 0.15*j, shuffle_test=False)
+            Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2 + 0.2*j, shuffle_test=False)
         idx_test = test_data.y["idx"]
         idx_tests.append(idx_test)
         #    # iterate over directory with different window size
@@ -191,12 +191,12 @@ if __name__ == "__main__":
             res_w_path_sr = os.path.join(res_path_sr, res_w)
             res_w_path_lr = os.path.join(res_path_lr, res_w)
             # l2_error_tau[:, j, i] = np.load(res_w_path_tau + "/l2_rel_error.npy")
-            l2_error_nn[:61, j, i] = np.load(res_w_path_nn + "/l2_rel_error.npy")
-            l2_error_sr[:61, j, i] = np.load(res_w_path_sr + "/l2_rel_error.npy")
-            l2_error_lr[:61, j, i] = np.load(res_w_path_lr + "/l2_rel_error.npy")
-            l2_error_nn[61:, j, i] = np.load(res_w_path_nn + "/l2_rel_error_part.npy")
-            l2_error_sr[61:, j, i] = np.load(res_w_path_sr + "/l2_rel_error_part.npy")
-            l2_error_lr[61:, j, i] = np.load(res_w_path_lr + "/l2_rel_error_part.npy")
+            l2_error_nn[:, j, i] = np.load(res_w_path_nn + "/l2_rel_error.npy")
+            l2_error_sr[:, j, i] = np.load(res_w_path_sr + "/l2_rel_error.npy")
+            l2_error_lr[:, j, i] = np.load(res_w_path_lr + "/l2_rel_error.npy")
+            # l2_error_nn[61:, j, i] = np.load(res_w_path_nn + "/l2_rel_error_part.npy")
+            # l2_error_sr[61:, j, i] = np.load(res_w_path_sr + "/l2_rel_error_part.npy")
+            # l2_error_lr[61:, j, i] = np.load(res_w_path_lr + "/l2_rel_error_part.npy")
             if simplify_models:
                 open(res_w_path_sr + '/simplified_models.txt', 'w').close()
                 # simplify expressions
@@ -219,8 +219,8 @@ if __name__ == "__main__":
     # mean_dd_vms_rom_error = np.mean(dd_vms_rom_error)
     print(np.mean(dd_vms_rom_error), np.std(dd_vms_rom_error))
     for i, idx_test in enumerate(idx_tests):
-        print(np.mean(l2_error_sr[idx_test, i], axis=0),
-              np.std(l2_error_sr[idx_test, i], axis=0))
+        print(np.mean(l2_error_lr[idx_test, i], axis=0),
+              np.std(l2_error_lr[idx_test, i], axis=0))
 
     # tau = np.load(os.path.join(path, "tau.npy"), allow_pickle=True)
     # print("Simplifying...")
