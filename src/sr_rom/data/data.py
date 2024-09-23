@@ -178,7 +178,7 @@ def process_data(r: int, bench_name: str, t_sample: int):
             # load matrices A and B true
             a0_full, b0_full, cu_full, _ = load_rom_ops(
                 directory_path)
-            _, _, A_true_i, _, B_true_i, _, _ = get_rom_ops_r_dim(
+            _, _, A_true_i, _, B_true_i, _, _, _, _ = get_rom_ops_r_dim(
                 a0_full, b0_full, cu_full, r)
             B_true_i = B_true_i.reshape((r, r, r))
             Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T

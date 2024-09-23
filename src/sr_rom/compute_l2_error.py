@@ -13,15 +13,16 @@ def get_dir(task, folder_name, w, test_perc, make_dir=False):
     task_folder = main_dir + "results_" + task + "/"
     dir = task_folder + folder_name + '/results_' + \
         str(test_perc) + "/results_w_" + str(w) + "_n_2/"
+    # dir = '/home/smanti/SR-ROM/lr/'
     if make_dir:
         os.makedirs(dir)
     return dir
 
 
 def f(idx_Re):
-    _, avgerr_L2, _, avgrelerr_L2, _, _, u_coefs = main(
+    _, avgerr_L2, _, avgrelerr_L2, _, _, _, energy = main(
         int(Re[idx_Re]), method, dir, idx_Re, False)
-    return idx_Re, avgerr_L2, avgrelerr_L2, u_coefs
+    return idx_Re, avgerr_L2, avgrelerr_L2, energy
 
 
 # load data
@@ -29,13 +30,13 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [60]
-windows = [5]
-method = "NN"
+test_perc_list = [40]
+windows = [3]
+method = "SR"
 shuffle = False
-task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
-t_sample = 200
-r = 2
+task = shuffle*"interpolation" + (1-shuffle)*"extrapolation_2001"
+t_sample = 1
+r = 5
 
 Re, A, B, tau, a_FOM, X, X_sampled, residual = process_data(
     r, "2dcyl/Re200_400", t_sample)
@@ -46,7 +47,7 @@ for test_perc in test_perc_list:
             f"Collecting results for {method} for {test_perc}% test and window {w}", flush=True)
         A_conv, B_conv, tau_conv = smooth_data(A, B, tau, w=w, num_smoothing=2, r=r)
         r_2 = np.zeros(r)
-        u_coefs = np.zeros((61, 2001, r+1))
+        energy = np.zeros((61, 2001, r+1))
 
         # split in training and test
         train_data, val_data, train_val_data, test_data = split_data(
@@ -120,15 +121,18 @@ for test_perc in test_perc_list:
         l2_error = np.zeros(len(Re))
         l2_rel_error = np.zeros(len(Re))
 
-        pool = Pool(32)
-        for result in pool.map(f, range(len(Re))):
-            l2_error[result[0]] = result[1]
-            l2_rel_error[result[0]] = result[2]
-            u_coefs[result[0]] = result[3]
-            print(result)
+        # pool = Pool(32)
+        # for result in pool.map(f, range(len(Re))):
+        #    l2_error[result[0]] = result[1]
+        #    l2_rel_error[result[0]] = result[2]
+        #    energy[result[0]] = result[3]
+        #    print(result)
+        res = f(60)
+        np.save("sr_energy.npy", res[-1])
+        # print(res[-1])
 
-        np.save(dir + "l2_error.npy", l2_error)
-        np.save(dir + "l2_rel_error.npy", l2_rel_error)
-        np.save(dir + "u_coefs.npy", u_coefs)
+        # np.save(dir + "l2_error.npy", l2_error)
+        # np.save(dir + "l2_rel_error.npy", l2_rel_error)
+        # np.save(dir + "energy.npy", energy)
 
     print("Done!")
