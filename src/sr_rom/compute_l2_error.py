@@ -15,6 +15,7 @@ def get_dir(task, folder_name, w, test_perc, make_dir=False):
         str(test_perc) + "/results_w_" + str(w) + "_n_2/"
     if make_dir:
         os.makedirs(dir)
+    dir = "/home/smanti/SR-ROM/sr/"
     return dir
 
 
@@ -29,9 +30,9 @@ t = np.linspace(500., 520., 2001)
 t_full = np.linspace(500., 520., 20001)
 
 
-test_perc_list = [20, 40, 60, 80]
-windows = [3, 5, 7]
-method = "NN"
+test_perc_list = [20]
+windows = [1]
+method = "SR"
 shuffle = False
 task = shuffle*"interpolation" + (1-shuffle)*"extrapolation"
 t_sample = 200
@@ -113,23 +114,29 @@ for test_perc in test_perc_list:
             np.savetxt(dir + "r_2_test.txt", r_2)
 
         # save mean and std of X
-        mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
-                            np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
+        # mean_std_X_train = [np.mean(train_val_data.y["X_sampled"][:, 1:], axis=0),
+        #                    np.std(train_val_data.y["X_sampled"][:, 1:], axis=0)]
+        X_train = a_FOM[0, :]
+        # Standardization
+        mean_std_X_train = [np.mean(X_train, axis=0),
+                            np.std(X_train, axis=0)]
         np.save(dir + "mean_std_X_train.npy", mean_std_X_train)
 
         l2_error = np.zeros(len(Re))
         l2_rel_error = np.zeros(len(Re))
 
-        pool = Pool(32)
-        for result in pool.map(f, range(len(Re))):
-            l2_error[result[0]] = result[1]
-            l2_rel_error[result[0]] = result[2]
-            u_coefs[result[0]] = result[3]
-            energy[result[0]] = result[4]
-            print(result[0], result[1], result[2])
+        # pool = Pool(32)
+        # for result in pool.map(f, range(len(Re))):
+        #    l2_error[result[0]] = result[1]
+        #    l2_rel_error[result[0]] = result[2]
+        #    u_coefs[result[0]] = result[3]
+        #    energy[result[0]] = result[4]
+        #    print(result[0], result[1], result[2])
+        res = f(0)
+        np.save(dir + "sr_energy_repr", res[-1])
 
-        np.save(dir + "l2_error.npy", l2_error)
-        np.save(dir + "l2_rel_error.npy", l2_rel_error)
-        np.save(dir + "energy.npy", energy)
+        # np.save(dir + "l2_error.npy", l2_error)
+        # np.save(dir + "l2_rel_error.npy", l2_rel_error)
+        # np.save(dir + "energy.npy", energy)
 
     print("Done!")
