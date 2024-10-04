@@ -144,16 +144,16 @@ def process_data(r: int, bench_name: str, t_sample: int):
     dir_list = sorted(os.listdir(bench_path))
     # num_Re = len(dir_list)
     num_Re = 61
-    num_t = 2001
+    num_t = 2000
     num_t_sampled = math.ceil(num_t/t_sample)
 
     Re = np.zeros(num_Re)
-    t = np.linspace(500, 520, num_t)
+    t = np.linspace(600, 680, num_t)
 
-    A = np.zeros((num_Re, 5, 5))
-    B = np.zeros((num_Re, 5, 5, 5))
-    Aa_FOM = np.zeros((num_Re, num_t_sampled, r))
-    a_FOM_TBa_FOM = np.zeros((num_Re, num_t_sampled, r))
+    # A = np.zeros((num_Re, 5, 5))
+    # B = np.zeros((num_Re, 5, 5, 5))
+    # Aa_FOM = np.zeros((num_Re, num_t_sampled, r))
+    # a_FOM_TBa_FOM = np.zeros((num_Re, num_t_sampled, r))
     tau = np.zeros((num_Re, num_t, r))
     a_FOM = np.zeros((num_Re, num_t, r))
 
@@ -165,29 +165,29 @@ def process_data(r: int, bench_name: str, t_sample: int):
         # Re[i] = curr_Re
         # a_FOM[i, :, :] = curr_a_FOM
 
-        if curr_Re <= 300:
-            Re[i] = curr_Re
-            a_FOM[i, :, :] = curr_a_FOM
-            curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",
-                                  delimiter=',', usecols=range(r))[:, :r]
-            curr_A = np.loadtxt(directory_path+"/tildeA_N5",
-                                delimiter=',', usecols=range(5))
-            curr_B = np.loadtxt(directory_path+"/tildeB_N5",
-                                delimiter=',', usecols=range(5**2)).reshape((5, 5, 5))
+        # if curr_Re <= 300:
+        Re[i] = curr_Re
+        a_FOM[i, :, :] = curr_a_FOM
+        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N"+str(r),
+                              delimiter=',', usecols=range(r))  # [:, :r]
+        # curr_A = np.loadtxt(directory_path+"/tildeA_N5",
+        #                    delimiter=',', usecols=range(5))
+        # curr_B = np.loadtxt(directory_path+"/tildeB_N5",
+        #                    delimiter=',', usecols=range(5**2)).reshape((5, 5, 5))
 
-            # load matrices A and B true
-            a0_full, b0_full, cu_full, _ = load_rom_ops(
-                directory_path)
-            _, _, A_true_i, _, B_true_i, _, _, _, _ = get_rom_ops_r_dim(
-                a0_full, b0_full, cu_full, r)
-            B_true_i = B_true_i.reshape((r, r, r))
-            Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T
-            a_FOM_TBa_FOM[i, :, :] = np.einsum(
-                "lj, ijk, lk->li", curr_a_FOM[::t_sample, :], B_true_i, curr_a_FOM[::t_sample, :])
+        # load matrices A and B true
+        # a0_full, b0_full, cu_full, _ = load_rom_ops(
+        #    directory_path)
+        # _, _, A_true_i, _, B_true_i, _, _, _, _ = get_rom_ops_r_dim(
+        #    a0_full, b0_full, cu_full, r)
+        # B_true_i = B_true_i.reshape((r, r, r))
+        # Aa_FOM[i, :, :] = (A_true_i @ curr_a_FOM[::t_sample, :].T).T
+        # a_FOM_TBa_FOM[i, :, :] = np.einsum(
+        #    "lj, ijk, lk->li", curr_a_FOM[::t_sample, :], B_true_i, curr_a_FOM[::t_sample, :])
 
-            A[i, :, :] = curr_A
-            B[i, :, :, :] = curr_B
-            tau[i, :, :] = curr_tau
+        # A[i, :, :] = curr_A
+        # B[i, :, :, :] = curr_B
+        tau[i, :, :] = curr_tau
 
     Re_grid, _ = np.meshgrid(Re, t)
     Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
@@ -203,12 +203,13 @@ def process_data(r: int, bench_name: str, t_sample: int):
         X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
 
     # compute residual
-    a_FOM_sampled = a_FOM[:, ::t_sample, :]
-    h_t = (t[-1]-t[0])/(num_t_sampled-1)
-    a_FOM_dot = (a_FOM_sampled[:, 1:, :] - a_FOM_sampled[:, :-1, :])/h_t
-    residual = a_FOM_dot - Aa_FOM[:, :-1, :] - a_FOM_TBa_FOM[:, :-1, :]
+    # a_FOM_sampled = a_FOM[:, ::t_sample, :]
+    # h_t = (t[-1]-t[0])/(num_t_sampled-1)
+    # a_FOM_dot = (a_FOM_sampled[:, 1:, :] - a_FOM_sampled[:, :-1, :])/h_t
+    # residual = a_FOM_dot - Aa_FOM[:, :-1, :] - a_FOM_TBa_FOM[:, :-1, :]
 
-    return Re, A, B, tau, a_FOM, X, X_sampled, residual
+    # return Re, A, B, tau, a_FOM, X, X_sampled, residual
+    return Re, tau, a_FOM, X, X_sampled
 
 
 def smooth_data(A, B, tau, w, num_smoothing, r):
