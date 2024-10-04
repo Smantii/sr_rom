@@ -168,8 +168,8 @@ def process_data(r: int, bench_name: str, t_sample: int):
         # if curr_Re <= 300:
         Re[i] = curr_Re
         a_FOM[i, :, :] = curr_a_FOM
-        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N"+str(r),
-                              delimiter=',', usecols=range(r))  # [:, :r]
+        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",  # +str(r),
+                              delimiter=',', usecols=range(r))[:, :r]
         # curr_A = np.loadtxt(directory_path+"/tildeA_N5",
         #                    delimiter=',', usecols=range(5))
         # curr_B = np.loadtxt(directory_path+"/tildeB_N5",
