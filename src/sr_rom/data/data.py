@@ -143,11 +143,14 @@ def process_data(r: int, bench_name: str, t_sample: int):
 
     dir_list = sorted(os.listdir(bench_path))
     num_Re = len(dir_list)
-    num_t = 2000
+    num_Re = 61
+    num_t = 2001
     num_t_sampled = math.ceil(num_t/t_sample)
 
     Re = np.zeros(num_Re)
-    t = np.linspace(600, 680, num_t)
+    # t = np.linspace(600, 680, num_t)
+
+    t = np.linspace(500, 520, num_t)
 
     tau = np.zeros((num_Re, num_t, r))
     a_FOM = np.zeros((num_Re, num_t, r))
@@ -158,11 +161,18 @@ def process_data(r: int, bench_name: str, t_sample: int):
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
 
-        Re[i] = curr_Re
-        a_FOM[i, :, :] = curr_a_FOM
-        curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N5",  # +str(r),
-                              delimiter=',', usecols=range(r))[:, :r]
-        tau[i, :, :] = curr_tau
+        if curr_Re == 200 or curr_Re == 300:
+            Re[i] = curr_Re
+            a_FOM[i, :, :] = curr_a_FOM
+            # if curr_Re == 15000:
+            #    curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N10_all.txt",  # +str(r),
+            #                          delimiter=',', usecols=range(r))[:, :r]
+            # else:
+            curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N"+str(r)+"_all.txt",
+                                  delimiter=',', usecols=range(r))
+            # curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N4_all.txt",
+            #                      delimiter=',', usecols=range(r))[:, :r]
+            tau[i, :, :] = curr_tau
 
     Re_grid, _ = np.meshgrid(Re, t)
     Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
