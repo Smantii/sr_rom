@@ -1,36 +1,10 @@
 import numpy as np
 import numpy.typing as npt
-from typing import Tuple
+from typing import List, Tuple
 from alpine.data import Dataset
 from sklearn.model_selection import train_test_split as ttsplit
 import os
 import math
-from sr_rom.code.utils import load_rom_ops, get_rom_ops_r_dim
-
-
-def toy_data(k: float, r: int) -> Tuple[npt.NDArray, npt.NDArray]:
-    A = np.zeros((r, r))
-    B = np.zeros((r, r, r))
-    # fill A
-    for j in np.arange(r):
-        # fill even rows
-        A[::2, j] = np.sum((-k)**(np.arange(j+2)))
-        # fill odd rows
-        A[1::2, j] = -np.sum((-k)**(np.arange(j+2)))
-    # fill B
-    for l in np.arange(r):
-        B[:, :, l] = (0.5)**l*A
-    return {'A': A, 'B': B}
-
-
-def generate_toy_data(r):
-    k_list = list(range(1, 11))
-    A_B_list = []
-    for k in k_list:
-        A_B_k = toy_data(k, r)
-        A_B_list.append(A_B_k)
-
-    return k_list, A_B_list
 
 
 def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuffle_test=False):
@@ -137,42 +111,36 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     return train_data, val_data, train_val_data, test_data
 
 
-def process_data(r: int, bench_name: str, t_sample: int):
+def process_data(r: int, bench_name: str, Re_list: List | str, t: npt.NDArray, t_sample: int):
     data_path = os.path.dirname(os.path.realpath(__file__))
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    num_Re = len(dir_list)
-    num_Re = 61
-    num_t = 2001
+    if Re_list == "full":
+        num_Re = len(dir_list)
+    elif isinstance(Re_list, list):
+        num_Re = len(Re_list)
+    num_t = len(t)
     num_t_sampled = math.ceil(num_t/t_sample)
 
-    Re = np.zeros(num_Re)
-    # t = np.linspace(600, 680, num_t)
+    Re, tau, a_FOM = [], [], []
 
-    t = np.linspace(500, 520, num_t)
-
-    tau = np.zeros((num_Re, num_t, r))
-    a_FOM = np.zeros((num_Re, num_t, r))
-
-    for i, directory in enumerate(dir_list):
+    for directory in dir_list:
         directory_path = os.path.join(bench_path, directory)
         curr_Re = float(directory.replace("Re", ""))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
         curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
 
-        if curr_Re == 200 or curr_Re == 300:
-            Re[i] = curr_Re
-            a_FOM[i, :, :] = curr_a_FOM
-            # if curr_Re == 15000:
-            #    curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N10_all.txt",  # +str(r),
-            #                          delimiter=',', usecols=range(r))[:, :r]
-            # else:
+        if curr_Re in Re_list:
+            Re.append(curr_Re)
+            a_FOM.append(curr_a_FOM)
             curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N"+str(r)+"_all.txt",
                                   delimiter=',', usecols=range(r))
-            # curr_tau = np.loadtxt(directory_path+"/vmsrom_clousre_N4_all.txt",
-            #                      delimiter=',', usecols=range(r))[:, :r]
-            tau[i, :, :] = curr_tau
+            tau.append(curr_tau)
+
+    Re = np.array(Re)
+    tau = np.array(tau)
+    a_FOM = np.array(a_FOM)
 
     Re_grid, _ = np.meshgrid(Re, t)
     Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
