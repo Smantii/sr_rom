@@ -111,7 +111,27 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     return train_data, val_data, train_val_data, test_data
 
 
-def process_data(r: int, bench_name: str, Re_list: List | str, t: npt.NDArray, t_sample: int):
+def process_data(r: int, bench_name: str, Re_list: List | str,
+                 t: npt.NDArray, t_sample: int):
+    """Function that transform ROM data in numpy arrays.
+
+    Args:
+        r: number of modes.
+        bench_name: name of the directory where the data are located
+        Re_list: list of Reynolds subdirectories to be used to build the
+            ROM numpy arrays.
+        t: numpy array equal to np.linspace(t_0, t_1, num_t_points), where
+            [t_0,t_1] is the interval in which the ROM operators are defined.
+        t_sample: time sampling index.
+
+    Returns:
+        the Reynolds, tau and a_FOM numpy arrays (first three numpy arrays); one
+        numpy matrix of shape (num_Re, num_t) rows and r+1 columns, in which each row
+        is the value of Re (first column) and a_FOM in such Re and given time.
+        The last numpy array is built on the same fashion of X but has dimension 
+        (num_Re, num_t_sampled).
+    """
+
     data_path = os.path.dirname(os.path.realpath(__file__))
     bench_path = os.path.join(data_path, bench_name)
 
