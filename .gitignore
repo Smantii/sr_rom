@@ -42,6 +42,8 @@ __pycache__/*
 *git-filter-repo.py
 src/sr_rom/results_*
 *tt
+*2dcyl
+*ldc
 
 # Project files
 .ropeproject
