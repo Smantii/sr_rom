@@ -149,7 +149,8 @@ def process_data(r: int, bench_name: str, Re_list: List | str,
         directory_path = os.path.join(bench_path, directory)
         curr_Re = float(directory.replace("Re", ""))
         uk = np.loadtxt(directory_path+"/uk", delimiter=',')
-        curr_a_FOM = uk.reshape((num_t, 41))[:, 1:(r+1)]
+        num_basis_functions = int(len(uk)/num_t)
+        curr_a_FOM = uk.reshape((num_t, num_basis_functions))[:, 1:(r+1)]
 
         if curr_Re in Re_list:
             Re.append(curr_Re)
