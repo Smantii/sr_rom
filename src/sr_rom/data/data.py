@@ -111,8 +111,7 @@ def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuf
     return train_data, val_data, train_val_data, test_data
 
 
-def process_data(r: int, bench_name: str, Re_list: List | str,
-                 t: npt.NDArray, t_sample: int):
+def process_data(r: int, bench_name: str, Re_list: List | str, num_t: List):
     """Function that transform ROM data in numpy arrays.
 
     Args:
@@ -136,12 +135,12 @@ def process_data(r: int, bench_name: str, Re_list: List | str,
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    if Re_list == "full":
-        num_Re = len(dir_list)
-    elif isinstance(Re_list, list):
-        num_Re = len(Re_list)
-    num_t = len(t)
-    num_t_sampled = math.ceil(num_t/t_sample)
+    # if Re_list == "full":
+    #    num_Re = len(dir_list)
+    # elif isinstance(Re_list, list):
+    #    num_Re = len(Re_list)
+    # num_t = len(t)
+    # num_t_sampled = math.ceil(num_t/t_sample)
 
     Re, tau, a_FOM = [], [], []
 
@@ -163,20 +162,21 @@ def process_data(r: int, bench_name: str, Re_list: List | str,
     tau = np.array(tau)
     a_FOM = np.array(a_FOM)
 
-    Re_grid, _ = np.meshgrid(Re, t)
-    Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
+    # Re_grid, _ = np.meshgrid(Re, t)
+    # Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
 
     # fill matrices of data, both in the case of all and sampled times
-    X = np.zeros((num_Re*num_t, r+1))
-    X_sampled = np.zeros((num_Re*num_t_sampled, r+1))
-    X[:, 0] = Re_grid.flatten()
-    X_sampled[:, 0] = Re_sampled_grid.flatten()
-    for i in range(r):
-        X[:, i+1] = a_FOM[:, :, i].flatten('F')
-        # in this case only a portion of time steps is considered
-        X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
+    # X = np.zeros((num_Re*num_t, r+1))
+    # X_sampled = np.zeros((num_Re*num_t_sampled, r+1))
+    # X[:, 0] = Re_grid.flatten()
+    # X_sampled[:, 0] = Re_sampled_grid.flatten()
+    # for i in range(r):
+    #    X[:, i+1] = a_FOM[:, :, i].flatten('F')
+    #    # in this case only a portion of time steps is considered
+    #    X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
 
-    return Re, tau, a_FOM, X, X_sampled
+    # return Re, tau, a_FOM, X, X_sampled
+    return Re, tau, a_FOM
 
 
 def smooth_data(A, B, tau, w, num_smoothing, r):
