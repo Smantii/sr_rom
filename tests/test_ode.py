@@ -1,5 +1,5 @@
 import numpy as np
-from sr_rom.time_extrapolation.fit_models import solve_ode
+from sr_rom.time_extrapolation.vmsrom_solver import solve_ode
 
 
 def test_ode():
@@ -17,16 +17,22 @@ def test_ode():
     u_sr_true = np.load(f"{sr_directory}ucoefs_sr_0.npy")
     u_nn_true = np.load(f"{nn_directory}ucoefs_nn_0.npy")
 
-    _, _, _, u_lr, _ = solve_ode([400, 500], sdir, lr_directory, "LR", 0,
-                                 100, 0.01, 1, 2, 0)
-    _, _, _, u_sr, _ = solve_ode([400, 500], sdir, sr_directory, "SR", 0,
-                                 100, 0.01, 1, 2, 0)
-    _, _, _, u_nn, _ = solve_ode([400, 500], sdir, nn_directory, "NN", 0,
-                                 100, 0.01, 1, 2, 0)
+    # load actual energies
+    ene_lr_true = np.load(f"{lr_directory}energy_lr.npy")
+    ene_sr_true = np.load(f"{sr_directory}energy_sr_0.npy")
+    ene_nn_true = np.load(f"{nn_directory}energy_nn_0.npy")
+
+    u_lr, ene_lr = solve_ode(400, "LR", sdir, lr_directory,  100, 0.01, 1, 2, 0)
+    u_sr, ene_sr = solve_ode(400, "SR", sdir, sr_directory, 100, 0.01, 1, 2, 0)
+    u_nn, ene_nn = solve_ode(400, "NN", sdir, nn_directory, 100, 0.01, 1, 2, 0)
 
     assert np.allclose(u_lr, u_lr_true)
     assert np.allclose(u_sr, u_sr_true)
     assert np.allclose(u_nn, u_nn_true)
+
+    assert np.allclose(ene_lr, ene_lr_true)
+    assert np.allclose(ene_sr, ene_sr_true)
+    assert np.allclose(ene_nn, ene_nn_true)
 
 
 if __name__ == "__main__":
