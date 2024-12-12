@@ -22,9 +22,9 @@ def test_ode():
     ene_sr_true = np.load(f"{sr_directory}energy_sr_0.npy")
     ene_nn_true = np.load(f"{nn_directory}energy_nn_0.npy")
 
-    u_lr, ene_lr = solve_ode(400, "LR", sdir, lr_directory,  100, 0.01, 1, 2, 0)
-    u_sr, ene_sr = solve_ode(400, "SR", sdir, sr_directory, 100, 0.01, 1, 2, 0)
-    u_nn, ene_nn = solve_ode(400, "NN", sdir, nn_directory, 100, 0.01, 1, 2, 0)
+    u_lr, ene_lr = solve_ode(400, "LR", sdir, lr_directory,  100, 0.01, 1, 2, None)
+    u_sr, ene_sr = solve_ode(400, "SR", sdir, sr_directory, 100, 0.01, 1, 2, None)
+    u_nn, ene_nn = solve_ode(400, "NN", sdir, nn_directory, 100, 0.01, 1, 2, None)
 
     assert np.allclose(u_lr, u_lr_true)
     assert np.allclose(u_sr, u_sr_true)
