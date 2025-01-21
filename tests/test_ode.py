@@ -1,5 +1,5 @@
 import numpy as np
-from sr_rom.time_extrapolation.vmsrom_solver import solve_ode
+from sr_rom.vmsrom_solver import solve_ode
 
 
 def test_ode():
