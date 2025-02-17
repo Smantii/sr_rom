@@ -4,22 +4,10 @@ from typing import List, Tuple
 from alpine.data import Dataset
 from sklearn.model_selection import train_test_split as ttsplit
 import os
-import math
 
 
 def split_data(Re, A, B, tau, a_FOM, X, X_sampled, residual, test_size=0.2, shuffle_test=False):
     num_data = len(Re)
-    # num_test = round(test_size*num_data)
-    # half_num_test = int(num_test/2)
-    # center = int((num_data - 1)/2)
-
-    # idx_test = np.arange(center - half_num_test, center + half_num_test)
-    # idx_train_val = np.concatenate(
-    #    (np.arange(center - half_num_test), np.arange(center + half_num_test, num_data)))
-    # Re_train_val = Re[idx_train_val]
-    # Re_test = Re[idx_test]
-
-    # FIXME: fix hardcoded numbers!
 
     Re_train_val, Re_test, idx_train_val, idx_test = ttsplit(
         Re, np.arange(num_data), test_size=test_size, random_state=42, shuffle=shuffle_test)
@@ -135,13 +123,6 @@ def process_data(r: int, bench_name: str, Re_list: List | str, num_t: List):
     bench_path = os.path.join(data_path, bench_name)
 
     dir_list = sorted(os.listdir(bench_path))
-    # if Re_list == "full":
-    #    num_Re = len(dir_list)
-    # elif isinstance(Re_list, list):
-    #    num_Re = len(Re_list)
-    # num_t = len(t)
-    # num_t_sampled = math.ceil(num_t/t_sample)
-
     Re, tau, a_FOM = [], [], []
 
     for directory in dir_list:
@@ -162,48 +143,4 @@ def process_data(r: int, bench_name: str, Re_list: List | str, num_t: List):
     tau = np.array(tau)
     a_FOM = np.array(a_FOM)
 
-    # Re_grid, _ = np.meshgrid(Re, t)
-    # Re_sampled_grid, _ = np.meshgrid(Re, t[::t_sample])
-
-    # fill matrices of data, both in the case of all and sampled times
-    # X = np.zeros((num_Re*num_t, r+1))
-    # X_sampled = np.zeros((num_Re*num_t_sampled, r+1))
-    # X[:, 0] = Re_grid.flatten()
-    # X_sampled[:, 0] = Re_sampled_grid.flatten()
-    # for i in range(r):
-    #    X[:, i+1] = a_FOM[:, :, i].flatten('F')
-    #    # in this case only a portion of time steps is considered
-    #    X_sampled[:, i+1] = a_FOM[:, ::t_sample, i].flatten('F')
-
-    # return Re, tau, a_FOM, X, X_sampled
     return Re, tau, a_FOM
-
-
-def smooth_data(A, B, tau, w, num_smoothing, r):
-    A_conv = A.copy()
-    B_conv = B.copy()
-
-    tau_conv = np.zeros_like(tau)
-
-    for _ in range(num_smoothing):
-
-        for i in range(r):
-            for j in range(r):
-                A_conv[:, i, j] = np.convolve(A[:, i, j], np.ones(w), 'same') / w
-
-        for i in range(r):
-            for j in range(r):
-                for k in range(r):
-                    B_conv[:, i, j, k] = np.convolve(
-                        B[:, i, j, k], np.ones(w), 'same') / w
-
-        A = A_conv
-        B = B_conv
-
-        for i in range(r):
-            for j in range(2001):
-                tau_conv[:, j, i] = np.convolve(tau[:, j, i], np.ones(w), 'same') / w
-
-        tau = tau_conv
-
-    return A_conv, B_conv, tau_conv

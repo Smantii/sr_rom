@@ -5,6 +5,7 @@ from sr_rom.fit_models import *
 import warnings
 import joblib
 import torch
+import os
 
 # suppress warnings
 warnings.filterwarnings("ignore")
@@ -135,10 +136,12 @@ if __name__ == "__main__":
                         np.std(X, axis=0)]
     X = (X - mean_std_X_train[0])/mean_std_X_train[1]
 
+    main_path = os.path.dirname(os.path.realpath(__file__))
     # path to the NekROM operators
-    sdir = f"/home/smanti/sr_rom/src/sr_rom/data/{bench_name}Re/Re{str(fixed_Re)}"
+    sdir = os.path.join(main_path, f"data/{bench_name}Re/Re{str(fixed_Re)}")
     # path to FOM
-    fom_dir = f"/home/smanti/sr_rom/src/sr_rom/data/{bench_name}fom_energies/Re{str(fixed_Re)}"
+    fom_dir = os.path.join(
+        main_path, f"data/{bench_name}fom_energies/Re{str(fixed_Re)}")
 
     fom_length = sum(1 for _ in open(f"{fom_dir}/fom_energy"))
     energy_FOM = np.zeros(fom_length)
