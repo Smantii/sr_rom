@@ -15,14 +15,14 @@ $ pip install .
 ```
 
 ## Usage
-To reproduce the results, download the data available here and move them using
+To reproduce the results, download the data available [here](https://drive.google.com/drive/folders/16rg1L3277Dp9IOpxF818vxinQVYy5bdn) and move them using
 
 ```bash
 $ mv data/* src/sr_rom/data/
 ```
 
 
-Then, change the folder name in `compute_results.py` and run
+Then, change the results folder name in `compute_results.py` and run
 ```bash
 $ python src/sr_rom/compute_results.py
 ```
